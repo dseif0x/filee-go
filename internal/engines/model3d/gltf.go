@@ -103,7 +103,7 @@ func readGltf(ctx context.Context, path string, progress func(float64)) (*Model,
 			return nil, errors.New(describeGltf(e))
 		}
 	}
-	model, err := readGltfScene(ctx, doc, dir)
+	model, err := readGltfSceneSafe(ctx, doc, dir)
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			return nil, err
@@ -134,6 +134,16 @@ func nodeLocal(n *gltf.Node) mat4 {
 	s := n.Scale
 	t := n.Translation
 	return scaleMatrix(float32(s[0]), float32(s[1]), float32(s[2])).mul(rot).mul(translation(vec3{float32(t[0]), float32(t[1]), float32(t[2])}))
+}
+
+// readGltfSceneSafe turns a panic of the accessor reader on a damaged file into an error.
+func readGltfSceneSafe(ctx context.Context, doc *gltf.Document, dir string) (m *Model, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			m, err = nil, fmt.Errorf("%v", r)
+		}
+	}()
+	return readGltfScene(ctx, doc, dir)
 }
 
 func readGltfScene(ctx context.Context, doc *gltf.Document, dir string) (*Model, error) {
@@ -216,12 +226,46 @@ func readGltfScene(ctx context.Context, doc *gltf.Document, dir string) (*Model,
 	return model, nil
 }
 
+// maxSparseElements bounds an accessor without a buffer view (all zeros, maybe sparse).
+const maxSparseElements = 1 << 26
+
+// checkAccessorSize refuses an accessor whose count does not fit its buffer
+// view: the reader allocates count elements before it reads, so a hostile
+// count would ask for gigabytes.
+func checkAccessorSize(doc *gltf.Document, acr *gltf.Accessor) error {
+	if acr.Count < 0 {
+		return errors.New("an accessor has a negative count")
+	}
+	if acr.BufferView == nil {
+		if acr.Count > maxSparseElements {
+			return errors.New("an accessor is too large")
+		}
+		return nil
+	}
+	if *acr.BufferView < 0 || *acr.BufferView >= len(doc.BufferViews) {
+		return fmt.Errorf("buffer view %d does not exist", *acr.BufferView)
+	}
+	bv := doc.BufferViews[*acr.BufferView]
+	elem := int64(acr.ComponentType.ByteSize()) * int64(acr.Type.Components())
+	if acr.Count == 0 {
+		return nil
+	}
+	stride := max(int64(bv.ByteStride), elem)
+	if int64(acr.ByteOffset)+stride*int64(acr.Count-1)+elem > int64(bv.ByteLength) {
+		return errors.New("an accessor does not fit its buffer view")
+	}
+	return nil
+}
+
 // accessorFloats reads an accessor as float32 values (comps per element), normalizing integers when the accessor says so.
 func accessorFloats(doc *gltf.Document, index int) ([]float32, int, int, error) {
 	if index < 0 || index >= len(doc.Accessors) {
 		return nil, 0, 0, fmt.Errorf("accessor %d does not exist", index)
 	}
 	acr := doc.Accessors[index]
+	if err := checkAccessorSize(doc, acr); err != nil {
+		return nil, 0, 0, err
+	}
 	data, err := modeler.ReadAccessor(doc, acr, nil)
 	if err != nil {
 		return nil, 0, 0, err
@@ -368,6 +412,9 @@ func readGltfPrimitive(doc *gltf.Document, prim *gltf.Primitive, model *Model, m
 	if prim.Indices != nil {
 		if *prim.Indices < 0 || *prim.Indices >= len(doc.Accessors) {
 			return nil, fmt.Errorf("accessor %d does not exist", *prim.Indices)
+		}
+		if err := checkAccessorSize(doc, doc.Accessors[*prim.Indices]); err != nil {
+			return nil, err
 		}
 		if indices, err = modeler.ReadIndices(doc, doc.Accessors[*prim.Indices], nil); err != nil {
 			return nil, err

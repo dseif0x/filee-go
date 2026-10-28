@@ -215,3 +215,33 @@ func TestNotADrawing(t *testing.T) {
 		t.Fatalf("err %v", err)
 	}
 }
+
+func TestDwgRoundTrip(t *testing.T) {
+	in := testDrawing(t)
+	for _, v := range []presets.CadVersion{presets.AutoCad2000, presets.AutoCad2004, presets.AutoCad2007, presets.AutoCad2010, presets.AutoCad2018} {
+		s := step(t, in, "dxf", "dwg")
+		s.Preset.Cad.Version = v
+		out := run(t, s)
+		doc, err := ReadDocument(out, "dwg", nil)
+		if err != nil {
+			t.Fatalf("%v: %v", v, err)
+		}
+		if want := VersionFor(v, cadoc.AC1032, "dwg"); doc.Header.Version != want {
+			t.Fatalf("version %v want %v", doc.Header.Version, want)
+		}
+		if n := len(doc.ModelSpace().Entities); n < 7 {
+			t.Fatalf("%v: %d entities", v, n)
+		}
+		// DWG renders too.
+		run(t, step(t, out, "dwg", "png"))
+	}
+}
+
+func TestDwgSampleToPdf(t *testing.T) {
+	for _, name := range []string{"reader_sample_AC1021.dwg", "reader_dynblock.dwg"} {
+		out := run(t, step(t, filepath.Join("cadoc", "dwg", "testdata", name), "dwg", "pdf"))
+		if data, _ := os.ReadFile(out); !bytes.HasPrefix(data, []byte("%PDF")) {
+			t.Fatalf("%s: no PDF", name)
+		}
+	}
+}

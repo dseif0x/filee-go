@@ -18,6 +18,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf16"
 
 	dbzip2 "github.com/dsnet/compress/bzip2"
 	"github.com/klauspost/compress/gzip"
@@ -703,3 +704,150 @@ func gzipBytes(data []byte) []byte {
 }
 
 var _ = io.EOF
+
+// ---- CAB ----
+
+type cabEntry struct {
+	name string
+	data []byte
+}
+
+// writeCab writes a cabinet with one folder per method (0 stored, 1 MSZIP), all files in each.
+func writeCab(t *testing.T, path string, method int, files []cabEntry) {
+	t.Helper()
+	var stream []byte
+	for _, f := range files {
+		stream = append(stream, f.data...)
+	}
+	var blocks [][]byte
+	var sizes []int
+	var history []byte
+	for off := 0; off < len(stream) || off == 0 && len(stream) == 0; off += 32768 {
+		chunk := stream[off:min(len(stream), off+32768)]
+		sizes = append(sizes, len(chunk))
+		if method == 0 {
+			blocks = append(blocks, chunk)
+		} else {
+			var b bytes.Buffer
+			b.WriteString("CK")
+			w, _ := flate.NewWriterDict(&b, 6, history)
+			w.Write(chunk)
+			w.Close()
+			blocks = append(blocks, b.Bytes())
+			history = append(history, chunk...)
+			if len(history) > 32768 {
+				history = history[len(history)-32768:]
+			}
+		}
+		if len(stream) == 0 {
+			break
+		}
+	}
+	var names [][]byte
+	filesSize := 0
+	for _, f := range files {
+		names = append(names, append([]byte(f.name), 0))
+		filesSize += 16 + len(f.name) + 1
+	}
+	header := 36
+	folderAt := header
+	filesAt := folderAt + 8
+	dataAt := filesAt + filesSize
+	var w bytes.Buffer
+	le := func(v any) { binary.Write(&w, binary.LittleEndian, v) }
+	w.WriteString("MSCF")
+	le(uint32(0))
+	le(uint32(0)) // cabinet size: not checked by readers
+	le(uint32(0))
+	le(uint32(filesAt))
+	le(uint32(0))
+	w.Write([]byte{3, 1})
+	le(uint16(1))
+	le(uint16(len(files)))
+	le(uint16(0))
+	le(uint16(0))
+	le(uint16(0))
+	le(uint32(dataAt))
+	le(uint16(len(blocks)))
+	le(uint16(method))
+	off := 0
+	for i, f := range files {
+		le(uint32(len(f.data)))
+		le(uint32(off))
+		le(uint16(0))
+		le(uint16(dosTime(knownTime) >> 16))
+		le(uint16(dosTime(knownTime)))
+		le(uint16(0x20 | 0x80))
+		w.Write(names[i])
+		off += len(f.data)
+	}
+	for i, b := range blocks {
+		le(uint32(0))
+		le(uint16(len(b)))
+		le(uint16(sizes[i]))
+		w.Write(b)
+	}
+	must(t, os.WriteFile(path, w.Bytes(), 0o644))
+}
+
+// ---- ISO with Joliet names ----
+
+func jolietRecordBytes(name string, extent, size int, dir bool) []byte {
+	var n []byte
+	switch name {
+	case "\x00", "\x01":
+		n = []byte(name)
+	default:
+		if !dir {
+			name += ";1"
+		}
+		for _, u := range utf16.Encode([]rune(name)) {
+			n = append(n, byte(u>>8), byte(u))
+		}
+	}
+	l := 33 + len(n)
+	if l%2 == 1 {
+		l++
+	}
+	r := make([]byte, l)
+	r[0] = byte(l)
+	binary.LittleEndian.PutUint32(r[2:], uint32(extent))
+	binary.BigEndian.PutUint32(r[6:], uint32(extent))
+	binary.LittleEndian.PutUint32(r[10:], uint32(size))
+	binary.BigEndian.PutUint32(r[14:], uint32(size))
+	r[18], r[19], r[20], r[21], r[22], r[23] = byte(knownTime.Year()-1900), byte(knownTime.Month()), byte(knownTime.Day()), 7, 8, 10
+	if dir {
+		r[25] = 2
+	}
+	r[32] = byte(len(n))
+	copy(r[33:], n)
+	return r
+}
+
+// jolietIso is an image whose supplementary (Joliet) tree holds a long Korean name and a sub folder.
+func jolietIso(t *testing.T, path string, files map[string]string) {
+	t.Helper()
+	img := make([]byte, 30*2048)
+	sector := func(i int) []byte { return img[i*2048 : (i+1)*2048] }
+	copy(sector(16), "\x01CD001\x01")
+	svd := sector(17)
+	copy(svd, "\x02CD001\x01")
+	copy(svd[88:], "%/E")
+	copy(svd[156:], jolietRecordBytes("\x00", 20, 2048, true))
+	copy(sector(18), "\xFFCD001\x01")
+	root := sector(20)
+	pos := 0
+	put := func(dir []byte, r []byte) { copy(dir[pos:], r); pos += len(r) }
+	put(root, jolietRecordBytes("\x00", 20, 2048, true))
+	put(root, jolietRecordBytes("\x01", 20, 2048, true))
+	put(root, jolietRecordBytes("긴 이름의 문서.txt", 22, len(files["긴 이름의 문서.txt"]), false))
+	put(root, jolietRecordBytes("폴더", 21, 2048, true))
+	sub := sector(21)
+	pos = 0
+	put(sub, jolietRecordBytes("\x00", 21, 2048, true))
+	put(sub, jolietRecordBytes("\x01", 20, 2048, true))
+	put(sub, jolietRecordBytes("안.txt", 23, len(files["폴더/안.txt"]), false))
+	copy(sector(22), files["긴 이름의 문서.txt"])
+	copy(sector(23), files["폴더/안.txt"])
+	must(t, os.WriteFile(path, img, 0o644))
+}

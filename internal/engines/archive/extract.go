@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"compress/bzip2"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -39,7 +40,7 @@ var readableFormats = []string{
 }
 
 // sevenZipOnly are read by 7-Zip alone.
-var sevenZipOnly = []string{"cab", "dmg", "img", "lha", "arj"}
+var sevenZipOnly = []string{"dmg", "img", "lha", "arj"}
 
 // sevenZipPreferred are read by 7-Zip when it is installed (it knows Joliet
 // and UDF names), else by the built-in reader.
@@ -137,7 +138,21 @@ func (x *extractor) extractInput(ctx context.Context, in *input, format, folder,
 	case "deb":
 		src, err = openAr(in)
 	case "iso":
-		src, err = openIso(in)
+		if j := openJoliet(in); j != nil {
+			src = j
+		} else {
+			src, err = openIso(in)
+		}
+	case "cab":
+		var cab *cabSource
+		if cab, err = openCab(in); err == nil {
+			src = cab
+		} else if errors.Is(err, errCabNeeds7Zip) {
+			if x.sevenZip != "" && in.path != "" {
+				return x.with7Zip(ctx, in.path, folder, scratchRoot)
+			}
+			return fmt.Errorf("%v; install 7-Zip to unpack it", strings.TrimSuffix(err.Error(), ": "+errCabNeeds7Zip.Error()))
+		}
 	case "rpm":
 		return extractRpm(ctx, in, folder, outName)
 	default:

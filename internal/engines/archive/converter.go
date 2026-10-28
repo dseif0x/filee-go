@@ -5,8 +5,8 @@
 //
 // The C# original reads through its bundled 7-Zip. Here Filee's own pure-Go
 // readers and writers do nearly everything; 7-Zip (7zz / 7z, when installed)
-// writes 7Z and reads the formats without a Go reader (CAB, DMG, IMG, LHA,
-// ARJ), and reads ISO images with Joliet and UDF names.
+// writes 7Z and reads the formats without a Go reader (DMG, IMG, LHA, ARJ,
+// LZX and Quantum cabinets), and reads ISO images (UDF) when installed.
 package archive
 
 import (
@@ -79,7 +79,7 @@ func (c *Converter) Status() convert.Status {
 	seven := c.sevenZip
 	c.mu.Unlock()
 	if seven == "" {
-		return convert.Available("built-in; 7-Zip not found (7Z output, CAB, DMG, IMG, LHA and ARJ need it)", "built-in")
+		return convert.Available("built-in; 7-Zip not found (7Z output, DMG, IMG, LHA, ARJ and LZX cabinets need it)", "built-in")
 	}
 	return convert.Available(seven, "built-in · 7-Zip")
 }

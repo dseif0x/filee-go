@@ -614,3 +614,37 @@ func TestWorkbenchWbpzKeepsEveryEntry(t *testing.T) {
 		t.Fatal("fake wbpz converted")
 	}
 }
+
+func TestCabinetsStoredAndMszip(t *testing.T) {
+	dir := t.TempDir()
+	files := []cabEntry{{`폴더\a.txt`, words(50_000)}, {"b.bin", noise(70_000, 3)}, {"empty.txt", nil}}
+	for _, method := range []int{0, 1} {
+		p := filepath.Join(dir, "setup"+string(rune('0'+method))+".cab")
+		writeCab(t, p, method, files)
+		folder := extractTo(t, New(), p, "cab")
+		for _, f := range files {
+			if got := read(t, filepath.Join(folder, filepath.FromSlash(strings.ReplaceAll(f.name, `\`, "/")))); got != string(f.data) {
+				t.Fatalf("method %d: %s differs", method, f.name)
+			}
+		}
+	}
+	lzx := filepath.Join(dir, "lzx.cab")
+	writeCab(t, lzx, 3, files[:1])
+	if !has7z() {
+		if _, err := New().Convert(ctx, step(t, lzx, "cab", formats.Folder, t.TempDir(), nil), nil); err == nil || !strings.Contains(err.Error(), "7-Zip") {
+			t.Fatalf("LZX without 7-Zip: %v", err)
+		}
+	}
+}
+
+func TestIsoWithJolietNames(t *testing.T) {
+	if has7z() {
+		t.Skip("7-Zip reads ISO images when installed")
+	}
+	p := filepath.Join(t.TempDir(), "disk.iso")
+	jolietIso(t, p, map[string]string{"긴 이름의 문서.txt": "joliet", "폴더/안.txt": "inside"})
+	folder := extractTo(t, New(), p, "iso")
+	if read(t, filepath.Join(folder, "긴 이름의 문서.txt")) != "joliet" || read(t, filepath.Join(folder, "폴더", "안.txt")) != "inside" {
+		t.Fatal(names(t, folder))
+	}
+}

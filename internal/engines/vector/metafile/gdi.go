@@ -208,9 +208,6 @@ func (p *player) pageMatrix() gfx.Matrix {
 	default:
 		sx, sy = 1, 1
 	}
-	if s.mapMode == mmText || s.mapMode == mmIsotropic || s.mapMode == mmAnisotropic {
-		return gfx.Matrix{A: sx, D: sy, E: s.viewOrg.X - s.winOrg.X*sx, F: s.viewOrg.Y - s.winOrg.Y*sy}
-	}
 	return gfx.Matrix{A: sx, D: sy, E: s.viewOrg.X - s.winOrg.X*sx, F: s.viewOrg.Y - s.winOrg.Y*sy}
 }
 
@@ -278,10 +275,7 @@ func (p *player) strokeStyle() (*gfx.StrokeStyle, gfx.Paint, bool) {
 		// Cosmetic pens are one device pixel wide whatever the mapping.
 		dev := p.toOut.MeanScale()
 		if scale > 0 {
-			w = math.Max(w, 1) * dev / scale
-			if pn.width > 1 && !geometric {
-				w = pn.width
-			}
+			w = dev / scale
 		} else {
 			w = 1
 		}

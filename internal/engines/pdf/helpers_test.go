@@ -26,6 +26,9 @@ func newStep(t testing.TB, input, from, to string, edit func(p *presets.Preset))
 	return &convert.Step{
 		InputPath: input, From: from, To: to, Preset: p, WorkDir: t.TempDir(),
 		Output: convert.AllocatorFunc(func(ext, suffix string) string {
+			if ext == "" {
+				return filepath.Join(out, base+suffix)
+			}
 			return filepath.Join(out, base+suffix+"."+ext)
 		}),
 	}

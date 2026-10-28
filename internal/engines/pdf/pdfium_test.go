@@ -44,3 +44,39 @@ func TestPdfiumRenderTiming(t *testing.T) {
 	}
 	t.Logf("pool init %v (open incl. init %v), first render %v, per page at 150 dpi %v", PdfiumInitTime, opened, first, per)
 }
+
+// A typical text page: 55 lines of about 90 characters (≈ 5,000 letters).
+func TestPdfiumTextTiming(t *testing.T) {
+	var lines []string
+	for i := 0; i < 55; i++ {
+		lines = append(lines, "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore")
+	}
+	page := testPage{W: 595, H: 842, Content: textLines(10, 50, 800, lines...)}
+	path := buildPDF(t, page, page, page, page, page)
+	d, err := openPdfiumFile(context.Background(), path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer d.Close()
+	start := time.Now()
+	pd, err := d.readPageData(0, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	first := time.Since(start)
+	start = time.Now()
+	for i := 1; i < 5; i++ {
+		if _, err := d.readPageData(i, true); err != nil {
+			t.Fatal(err)
+		}
+	}
+	per := time.Since(start) / 4
+	start = time.Now()
+	for i := 0; i < 5; i++ {
+		if _, err := d.Render(i, 150); err != nil {
+			t.Fatal(err)
+		}
+	}
+	render := time.Since(start) / 5
+	t.Logf("%d characters per page: text with positions first page %v, then %v per page; render at 150 dpi %v per page", len(pd.Letters), first, per, render)
+}

@@ -28,6 +28,8 @@ file converter. The C# original is the reference for behaviour.
 
 ## Engines
 
+- An edge cost of 0 in C# is `convert.Free` in Go (a Cost of 0 means the
+  default 10).
 - Mirror the C# engine's edges (`Edges` in the original) and costs, so routes
   come out the same. An engine whose program/library is missing reports
   `convert.Unavailable("engine.reason.missing", …)` from `Status()`.

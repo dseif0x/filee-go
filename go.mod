@@ -4,7 +4,7 @@ go 1.27.3
 
 require (
 	github.com/andybalholm/brotli v1.2.7
-	github.com/ebitengine/purego v0.10.1
+	github.com/ebitengine/purego v0.11.2
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/gen2brain/avif v0.6.0
 	github.com/gen2brain/heic v0.7.2

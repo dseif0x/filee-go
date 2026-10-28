@@ -22,6 +22,8 @@ type options struct {
 	keepDates     bool
 	zip           bool
 	settle        float64 // < 0 when not given
+	background    bool    // app: started at sign-in, no window
+	selftest      bool    // app: exercise the native bindings and exit
 	err           string
 }
 
@@ -98,6 +100,10 @@ func parseOptions(args []string) *options {
 					fail("--settle must be a number of seconds.")
 				}
 			}
+		case "--background":
+			o.background = true
+		case "--selftest", "--self-test":
+			o.selftest = true
 		case "-h", "--help":
 			o.inputs = append([]string{o.command}, o.inputs...)
 			o.command = "help"

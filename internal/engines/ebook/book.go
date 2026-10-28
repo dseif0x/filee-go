@@ -270,5 +270,4 @@ func imageSize(path string) (int, int, bool) {
 	return c.Width, c.Height, true
 }
 
-
 func esc(s string) string { return doc.EscapeXML(s) }

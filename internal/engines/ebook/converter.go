@@ -307,4 +307,3 @@ func init() {
 	doc.RegisterReader("htmlz", read(readHtmlzBook))
 	doc.RegisterReader("txtz", read(plain(readTxtzBook)))
 }
-

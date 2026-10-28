@@ -12,10 +12,10 @@ const (
 	PerPixel = 7200 / 96.0
 )
 
-func FromTwips(twips float64) int  { return int(math.Round(twips * 5)) }
-func FromEmu(emu float64) int      { return int(math.Round(emu / 127)) }
+func FromTwips(twips float64) int   { return int(math.Round(twips * 5)) }
+func FromEmu(emu float64) int       { return int(math.Round(emu / 127)) }
 func FromPoints(points float64) int { return int(math.Round(points * 100)) }
-func FromMm(mm float64) int        { return int(math.Round(mm * PerMm)) }
+func FromMm(mm float64) int         { return int(math.Round(mm * PerMm)) }
 
 // ParseLength parses a CSS-like length ("2in", "300px", "12pt", "50%") into HWPUNIT.
 func ParseLength(value string) (int, bool) {

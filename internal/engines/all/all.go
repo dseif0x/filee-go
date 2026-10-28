@@ -9,6 +9,7 @@ import (
 	"github.com/dseif0x/filee-go/internal/engines/data"
 	"github.com/dseif0x/filee-go/internal/engines/docxwriter"
 	"github.com/dseif0x/filee-go/internal/engines/ebook"
+	"github.com/dseif0x/filee-go/internal/engines/email"
 	"github.com/dseif0x/filee-go/internal/engines/fonts"
 	"github.com/dseif0x/filee-go/internal/engines/ghostscript"
 	"github.com/dseif0x/filee-go/internal/engines/libreoffice"
@@ -43,6 +44,7 @@ func Converters() []convert.Converter {
 		pdf.PdfText{},
 		pdf.PdfSlides{},
 		pdf.PdfTables{},
+		email.New(),
 		// office
 		markdown.New(),
 		spreadsheet.New(),

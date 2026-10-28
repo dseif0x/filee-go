@@ -19,6 +19,7 @@ require (
 	github.com/nwaples/rardecode/v2 v2.4.5
 	github.com/pdfcpu/pdfcpu v0.16.4
 	github.com/pelletier/go-toml/v2 v2.4.3
+	github.com/richardlehane/mscfb v1.0.7
 	github.com/tetratelabs/wazero v1.12.0
 	github.com/ulikunitz/xz v0.5.17
 	github.com/xuri/excelize/v2 v2.11.0
@@ -39,7 +40,6 @@ require (
 	github.com/jolestar/go-commons-pool/v2 v2.1.2 // indirect
 	github.com/mattn/go-runewidth v0.0.31 // indirect
 	github.com/pierrec/lz4/v4 v4.1.27 // indirect
-	github.com/richardlehane/mscfb v1.0.7 // indirect
 	github.com/richardlehane/msoleps v1.0.6 // indirect
 	github.com/spf13/afero v1.15.0 // indirect
 	github.com/stangelandcl/ppmd v0.1.1 // indirect

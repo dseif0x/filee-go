@@ -259,6 +259,18 @@ func selfTest(a *app.App, w io.Writer) error {
 		}
 		return "FileeServicesProvider answers convertFiles:userData:error:", nil
 	})
+	check("menu bar only", func() (string, error) {
+		delegate := newAppDelegate()
+		for _, sel := range []string{"applicationShouldTerminate:", "applicationShouldHandleReopen:hasVisibleWindows:"} {
+			if !ns.Bool(delegate, "respondsToSelector:", ns.Sel(sel)) {
+				return "", fmt.Errorf("app delegate doesn't answer %s", sel)
+			}
+		}
+		if !ns.Bool(windowDelegate(), "respondsToSelector:", ns.Sel("windowWillClose:")) {
+			return "", fmt.Errorf("window delegate doesn't answer windowWillClose:")
+		}
+		return fmt.Sprintf("quit and window-close handlers present, system quit now %v", systemQuit()), nil
+	})
 	_ = objc.ID(0)
 	if failed > 0 {
 		fmt.Fprintf(w, "%d check(s) failed\n", failed)

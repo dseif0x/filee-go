@@ -168,3 +168,13 @@ func removeExifThumbnail(exif []byte) []byte {
 	}
 	return out
 }
+
+// ExifUpright is exif for pixels that are upright now: orientation 1 and no
+// thumbnail (an old one would show the picture as it was).
+func ExifUpright(exif []byte) []byte {
+	exif = normalizeExif(exif)
+	if exif == nil {
+		return nil
+	}
+	return removeExifThumbnail(setExifOrientation(exif, 1))
+}

@@ -433,3 +433,19 @@ func paeth(a, b, c byte) byte {
 	}
 	return c
 }
+
+// EncodePNG32 writes img as an 8-bit RGBA PNG whatever its pixels (ImageMagick's
+// PNG32), without metadata: for containers that expect alpha (ICNS).
+func EncodePNG32(img *image.NRGBA) []byte {
+	img = ToNRGBA(img)
+	var out bytes.Buffer
+	out.Write(pngSignature)
+	ihdr := make([]byte, 13)
+	binary.BigEndian.PutUint32(ihdr, uint32(img.Rect.Dx()))
+	binary.BigEndian.PutUint32(ihdr[4:], uint32(img.Rect.Dy()))
+	ihdr[8], ihdr[9] = 8, 6
+	writePNGChunk(&out, "IHDR", ihdr)
+	writePNGChunk(&out, "IDAT", pngImageData(img, 4, zlib.BestCompression))
+	writePNGChunk(&out, "IEND", nil)
+	return out.Bytes()
+}

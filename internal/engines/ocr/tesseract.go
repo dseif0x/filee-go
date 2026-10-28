@@ -48,7 +48,7 @@ func (t *Tesseract) available() bool       { return locateTesseract() != "" }
 func (t *Tesseract) Status() convert.Status {
 	exe := locateTesseract()
 	if exe == "" {
-		return convert.Unavailable("engine.reason.missing", "tesseract")
+		return convert.Unavailable("engine.reason.not_installed", "tesseract")
 	}
 	version := ""
 	if strings.HasPrefix(exe, tools.EnginesDir()) {

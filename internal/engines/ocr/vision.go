@@ -53,7 +53,7 @@ func (v *Vision) Status() convert.Status {
 		return convert.Unavailable("engine.reason.unsupported_platform", "")
 	}
 	if !v.recognizer.Available() {
-		return convert.Unavailable("engine.reason.missing", "Vision.framework")
+		return convert.Unavailable("engine.reason.not_installed", "Vision.framework")
 	}
 	return convert.Available(strings.Join(v.recognizer.Languages(), ", "), "macOS "+osVersion())
 }

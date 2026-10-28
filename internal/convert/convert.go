@@ -73,7 +73,7 @@ func (e Edge) EffectiveCost() int { return e.cost() }
 // Status tells whether an engine can run here.
 type Status struct {
 	Available bool
-	// ReasonKey is a localization key saying why not ("engine.reason.missing").
+	// ReasonKey is a localization key saying why not ("engine.reason.not_installed").
 	ReasonKey string
 	Detail    string
 	Version   string

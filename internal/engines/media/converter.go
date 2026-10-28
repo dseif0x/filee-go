@@ -84,7 +84,7 @@ func (c *Converter) Transforms(from, to string) bool {
 func (c *Converter) Status() convert.Status {
 	f, _ := Locate()
 	if f == "" {
-		return convert.Unavailable("engine.reason.missing", "ffmpeg")
+		return convert.Unavailable("engine.reason.not_installed", "ffmpeg")
 	}
 	v, err := VersionOf(f)
 	if err != nil {

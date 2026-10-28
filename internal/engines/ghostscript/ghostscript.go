@@ -73,7 +73,7 @@ func (c *Converter) Edges() []convert.Edge {
 func (c *Converter) Status() convert.Status {
 	gs := Locate()
 	if gs == "" {
-		return convert.Unavailable("engine.reason.missing", "gs")
+		return convert.Unavailable("engine.reason.not_installed", "gs")
 	}
 	version := ""
 	if strings.HasPrefix(gs, tools.EnginesDir()) {

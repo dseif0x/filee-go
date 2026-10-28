@@ -32,7 +32,7 @@ file converter. The C# original is the reference for behaviour.
   default 10).
 - Mirror the C# engine's edges (`Edges` in the original) and costs, so routes
   come out the same. An engine whose program/library is missing reports
-  `convert.Unavailable("engine.reason.missing", …)` from `Status()`.
+  `convert.Unavailable("engine.reason.not_installed", …)` from `Status()`.
 - Refusals the user should understand are `convert.Refuse(key, detail)`, with
   the error keys of the original (`error.*`).
 - Outputs are allocated with `step.Output.Allocate(ext, suffix)`; "" means

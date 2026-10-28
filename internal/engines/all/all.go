@@ -5,6 +5,7 @@ package all
 import (
 	"github.com/dseif0x/filee-go/internal/convert"
 	"github.com/dseif0x/filee-go/internal/engines/archive"
+	"github.com/dseif0x/filee-go/internal/engines/cad"
 	"github.com/dseif0x/filee-go/internal/engines/calibre"
 	"github.com/dseif0x/filee-go/internal/engines/data"
 	"github.com/dseif0x/filee-go/internal/engines/docxwriter"
@@ -29,6 +30,7 @@ import (
 	"github.com/dseif0x/filee-go/internal/engines/pdf"
 	"github.com/dseif0x/filee-go/internal/engines/spreadsheet"
 	"github.com/dseif0x/filee-go/internal/engines/subtitles"
+	"github.com/dseif0x/filee-go/internal/engines/vector"
 	"github.com/dseif0x/filee-go/internal/engines/wic"
 )
 
@@ -41,6 +43,8 @@ func Converters() []convert.Converter {
 		subtitles.New(),
 		// Media
 		media.New(),
+		// CAD (C# order: after FFmpeg)
+		cad.New(),
 		// 3D models and geospatial data (C# order: after FFmpeg and CAD)
 		model3d.New(),
 		geo.New(),
@@ -71,6 +75,7 @@ func Converters() []convert.Converter {
 		pandoc.New(),
 		libreoffice.New(),
 		images.New(),
+		vector.New(),
 		icns.New(),
 		wic.New(),
 		calibre.New(),

@@ -3,6 +3,7 @@ module github.com/dseif0x/filee-go
 go 1.27.3
 
 require (
+	github.com/andybalholm/brotli v1.2.1
 	github.com/gen2brain/avif v0.6.0
 	github.com/gen2brain/heic v0.7.2
 	github.com/gen2brain/jpegxl v0.6.0
@@ -17,7 +18,6 @@ require (
 )
 
 require (
-	github.com/andybalholm/brotli v1.2.1 // indirect
 	github.com/ebitengine/purego v0.10.1 // indirect
 	github.com/klauspost/compress v1.18.2 // indirect
 	github.com/ncruces/go-image v0.1.0 // indirect

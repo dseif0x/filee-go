@@ -126,8 +126,10 @@ func DecodeBytes(data []byte, format string) (*Picture, error) {
 			return nil, fmt.Errorf("JPEG XL: %w", err)
 		}
 		p := &Picture{}
+		meta := jxlMeta(data)
 		for i, img := range anim.Image {
 			f := NewFrame(img)
+			f.Meta = meta
 			if i < len(anim.Delay) {
 				f.Delay, f.Ticks = anim.Delay[i], 1000
 			}
@@ -334,4 +336,9 @@ func DecodeImage(path, format string) (*image.NRGBA, error) {
 	f := SelectFrames(pic, format, "png")[0]
 	f.AutoOrient()
 	return f.Img, nil
+}
+
+func init() {
+	// Never a system libheif through purego: the WebAssembly decoder behaves the same everywhere.
+	heic.ForceWasmMode = true
 }

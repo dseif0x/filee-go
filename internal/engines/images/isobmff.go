@@ -3,6 +3,9 @@ package images
 import (
 	"bytes"
 	"encoding/binary"
+	"io"
+
+	"github.com/andybalholm/brotli"
 )
 
 // heifMeta reads the Exif item and the ICC profile (colr "prof") of a HEIF
@@ -173,4 +176,34 @@ func ilocExtent(iloc []byte, id uint32) (uint64, uint64, bool) {
 		}
 	}
 	return 0, 0, false
+}
+
+// jxlMeta reads the Exif and XMP boxes of a JPEG XL container (a bare
+// codestream has none). The decoder turns the picture itself.
+func jxlMeta(data []byte) Meta {
+	var m Meta
+	if !bytes.HasPrefix(data, []byte("\x00\x00\x00\x0cJXL \r\n\x87\n")) {
+		return m
+	}
+	eachBox(data, func(typ string, b []byte) {
+		// "brob": a Brotli-compressed box, its real type first
+		if typ == "brob" && len(b) > 4 {
+			if dec, err := io.ReadAll(io.LimitReader(brotli.NewReader(bytes.NewReader(b[4:])), 64<<20)); err == nil {
+				typ, b = string(b[:4]), dec
+			}
+		}
+		switch typ {
+		case "Exif":
+			if len(b) > 4 {
+				if skip := binary.BigEndian.Uint32(b); uint64(skip)+4 < uint64(len(b)) {
+					if exif := normalizeExif(bytes.Clone(b[4+skip:])); exif != nil {
+						m.Exif = setExifOrientation(exif, 1)
+					}
+				}
+			}
+		case "xml ":
+			m.XMP = bytes.Clone(b)
+		}
+	})
+	return m
 }

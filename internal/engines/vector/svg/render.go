@@ -140,6 +140,7 @@ func (d *Document) Draw(dev gfx.Device, m gfx.Matrix, opt Options) {
 		opt.FilterResolution = 1
 	}
 	r := &renderer{doc: d, dev: dev, fonts: d.fonts(), active: map[*Node]int{}, rootScale: m.MeanScale(), filterRes: opt.FilterResolution}
+	r.viewport = gfx.Rect{X1: d.Width, Y1: d.Height}.Transform(m)
 	c := r.rootContext(m)
 	if !c.st.display || !conditionsHold(d.root) {
 		return
@@ -158,6 +159,8 @@ type renderer struct {
 	filterRes   float64
 	budget      int
 	filterDepth int
+	// viewport is the drawing's area on the device (nothing outside shows).
+	viewport gfx.Rect
 }
 
 type context struct {

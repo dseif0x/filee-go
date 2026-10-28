@@ -137,6 +137,11 @@ func (r *renderer) drawFiltered(n, f *Node, c context, draw func(context)) {
 		return
 	}
 	dev := region.Transform(c.m)
+	if !r.viewport.Empty() {
+		// Only what can show is computed (a margin keeps blurs from the edge right).
+		margin := 0.1 * math.Max(r.viewport.Width(), r.viewport.Height())
+		dev = dev.Intersect(r.viewport.Outset(margin))
+	}
 	if dev.Empty() || dev.Width() <= 0 || dev.Height() <= 0 {
 		return
 	}

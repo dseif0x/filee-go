@@ -26,7 +26,13 @@ type PDF struct {
 	patterns  map[int]string
 	xobjects  map[int]string
 	images    map[image.Image]int
+	shapes    map[shapeKey]int
 	nameSeq   int
+}
+
+type shapeKey struct {
+	path *Path
+	rule FillRule
 }
 
 // PDFInfo is the document information.
@@ -39,7 +45,7 @@ type PDFInfo struct {
 
 // NewPDF starts a document.
 func NewPDF() *PDF {
-	d := &PDF{extG: map[string]int{}, extGNames: map[int]string{}, patterns: map[int]string{}, xobjects: map[int]string{}, images: map[image.Image]int{}}
+	d := &PDF{extG: map[string]int{}, extGNames: map[int]string{}, patterns: map[int]string{}, xobjects: map[int]string{}, images: map[image.Image]int{}, shapes: map[shapeKey]int{}}
 	d.pagesRef = d.reserve()
 	d.resRef = d.reserve()
 	return d
@@ -211,6 +217,24 @@ func (p *PDFPage) Fill(path *Path, m Matrix, rule FillRule, paint Paint) {
 		b.WriteString("/" + p.doc.alphaState(paint.Color.A, 1) + " gs\n")
 	}
 	b.WriteString(colorOp(paint.Color, false))
+	if path.Reusable {
+		// Stored once as a form that takes the colour set here.
+		key := shapeKey{path, rule}
+		ref, ok := p.doc.shapes[key]
+		if !ok {
+			var fb bytes.Buffer
+			writePath(&fb, path, Identity)
+			fb.WriteString(op)
+			bb := path.Bounds()
+			ref = p.doc.add(p.doc.stream(fmt.Sprintf("/Type/XObject/Subtype/Form/BBox[%s %s %s %s]/Resources %d 0 R",
+				num(bb.X0-1), num(bb.Y0-1), num(bb.X1+1), num(bb.Y1+1), p.doc.resRef), fb.Bytes(), true))
+			p.doc.xobjects[ref] = p.doc.name("S")
+			p.doc.shapes[key] = ref
+		}
+		b.WriteString(matrixOp(m))
+		b.WriteString("/" + p.doc.xobjects[ref] + " Do\nQ\n")
+		return
+	}
 	writePath(b, path, m)
 	b.WriteString(op + "Q\n")
 }

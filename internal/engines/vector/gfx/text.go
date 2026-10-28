@@ -245,19 +245,33 @@ func (m faceMap) ResolveFace(r rune) *font.Face {
 // GlyphPath returns the outline of a glyph at its size, origin at (x, y)
 // on the baseline, y down.
 func (f *Fonts) GlyphPath(g ShapedGlyph) *Path {
-	f.mu.Lock()
-	key := glyphKey{g.Face, g.GID}
-	unit, ok := f.outlines[key]
-	if !ok {
-		unit = glyphOutline(g.Face, g.GID)
-		f.outlines[key] = unit
-	}
-	f.mu.Unlock()
+	unit := f.UnitGlyph(g)
 	if unit == nil {
 		return nil
 	}
 	return unit.Transformed(Matrix{A: g.Size, D: g.Size, E: g.X, F: g.Y})
 }
+
+// UnitGlyph is the shared outline of a glyph at size 1 (origin on the
+// baseline, y down), marked Reusable so PDF output stores it once. Don't
+// modify it.
+func (f *Fonts) UnitGlyph(g ShapedGlyph) *Path {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	key := glyphKey{g.Face, g.GID}
+	unit, ok := f.outlines[key]
+	if !ok {
+		unit = glyphOutline(g.Face, g.GID)
+		if unit != nil {
+			unit.Reusable = true
+		}
+		f.outlines[key] = unit
+	}
+	return unit
+}
+
+// GlyphMatrix places a unit glyph of g.
+func GlyphMatrix(g ShapedGlyph) Matrix { return Matrix{A: g.Size, D: g.Size, E: g.X, F: g.Y} }
 
 // TextPath returns the outlines of shaped text placed at (x, y).
 func (f *Fonts) TextPath(t ShapedText, x, y float64) *Path {

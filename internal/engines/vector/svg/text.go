@@ -25,6 +25,14 @@ type textPiece struct {
 	path *gfx.Path
 	st   *style
 	lc   lengthContext
+	// glyphs are the shared unit outlines and their placement, for drawing
+	// glyph by glyph (a PDF then stores each glyph once).
+	glyphs []placedGlyph
+}
+
+type placedGlyph struct {
+	unit *gfx.Path
+	m    gfx.Matrix
 }
 
 // spaceState carries whitespace collapsing across the text's elements.
@@ -205,10 +213,12 @@ func (r *renderer) layoutText(n *Node, c context) []textPiece {
 				}
 			}
 			p := gp.Transformed(t)
-			if n := len(pieces); n > 0 && pieces[n-1].st == g.st {
+			pg := placedGlyph{r.fonts.UnitGlyph(g.g), t.Mul(gfx.Scale(g.g.Size, g.g.Size))}
+			if n := len(pieces); n > 0 && pieces[n-1].st == g.st && pieces[n-1].glyphs != nil {
 				pieces[n-1].path.Append(p)
+				pieces[n-1].glyphs = append(pieces[n-1].glyphs, pg)
 			} else {
-				pieces = append(pieces, textPiece{path: p, st: g.st, lc: g.lc})
+				pieces = append(pieces, textPiece{path: p, st: g.st, lc: g.lc, glyphs: []placedGlyph{pg}})
 			}
 		}
 		for i := range decos {
@@ -382,6 +392,7 @@ func (r *renderer) textOutline(n *Node, c context) *gfx.Path {
 func (r *renderer) drawText(n *Node, c context) {
 	pieces := r.layoutText(n, c)
 	// textLength / lengthAdjust on the text element stretch the whole line.
+	stretched := false
 	if v, ok := n.Attrs["textLength"]; ok && len(pieces) > 0 {
 		if l, ok := parseLength(v); ok && l.V > 0 {
 			want := c.lc.resolve(l, axisX)
@@ -395,6 +406,7 @@ func (r *renderer) drawText(n *Node, c context) {
 				for i := range pieces {
 					pieces[i].path = pieces[i].path.Transformed(t)
 				}
+				stretched = true
 			}
 		}
 	}
@@ -414,6 +426,12 @@ func (r *renderer) drawText(n *Node, c context) {
 		for _, o := range order {
 			switch o {
 			case "fill":
+				if paint, pattern, ok := r.resolvePaint(st.fill, st.fillOpacity, cc, bbox); ok && pattern == nil && paint.Gradient == nil && pc.glyphs != nil && !stretched {
+					for _, g := range pc.glyphs {
+						r.dev.Fill(g.unit, cc.m.Mul(g.m), gfx.NonZero, paint)
+					}
+					continue
+				}
 				r.fillPath(pc.path, cc, st.fill, st.fillOpacity, gfx.NonZero, bbox)
 			case "stroke":
 				r.strokePath(pc.path, cc, bbox)

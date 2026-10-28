@@ -27,6 +27,9 @@ type Path struct {
 	// Shape is set when the path is exactly this ellipse (in path
 	// coordinates), so CAD output can keep it a circle or ellipse.
 	Shape *EllipseHint
+	// Reusable paths (glyph outlines) are drawn many times: PDF output
+	// stores them once as a form.
+	Reusable bool
 }
 
 // EllipseHint describes an axis-aligned ellipse.

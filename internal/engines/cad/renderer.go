@@ -344,13 +344,16 @@ func drawText(dev gfx.Device, t *TextPrimitive, page *PageLayout, color RGB) {
 	if size < 0.01 || math.IsNaN(size) || math.IsInf(size, 0) || size > 1e6 {
 		return
 	}
-	shaped := fonts().Shape(t.Text, t.Face.query(), 1, "")
-	outline := fonts().TextPath(shaped, 0, 0)
-	if outline.Empty() {
-		return
-	}
+	f := fonts()
+	shaped := f.Shape(t.Text, t.Face.query(), 1, "")
 	m := gfx.Matrix{A: x.X, B: x.Y, C: y.X, D: y.Y, E: o.X, F: o.Y}
-	dev.Fill(outline, m, gfx.NonZero, gfx.Solid(color.gfx()))
+	paint := gfx.Solid(color.gfx())
+	// Glyph by glyph with shared outlines: a PDF stores each glyph once.
+	for _, g := range shaped.Glyphs {
+		if unit := f.UnitGlyph(g); unit != nil && !unit.Empty() {
+			dev.Fill(unit, m.Mul(gfx.GlyphMatrix(g)), gfx.NonZero, paint)
+		}
+	}
 }
 
 func drawPoint(dev gfx.Device, p *PointPrimitive, page *PageLayout, color RGB) {

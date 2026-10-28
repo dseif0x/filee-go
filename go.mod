@@ -13,6 +13,7 @@ require (
 	github.com/tetratelabs/wazero v1.12.0
 	github.com/woozymasta/bcn v0.7.0
 	golang.org/x/image v0.47.0
+	golang.org/x/sys v0.49.0
 )
 
 require (
@@ -21,5 +22,4 @@ require (
 	github.com/klauspost/compress v1.18.2 // indirect
 	github.com/ncruces/go-image v0.1.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
-	golang.org/x/sys v0.49.0 // indirect
 )

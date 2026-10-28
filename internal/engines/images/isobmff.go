@@ -51,7 +51,10 @@ func heifMeta(data []byte) Meta {
 			item := data[off : off+n]
 			skip := binary.BigEndian.Uint32(item)
 			if uint64(skip)+4 < n {
-				m.Exif = normalizeExif(bytes.Clone(item[4+skip:]))
+				// The decoders turn the picture (irot/imir): an orientation left in the Exif would turn it twice.
+				if exif := normalizeExif(bytes.Clone(item[4+skip:])); exif != nil {
+					m.Exif = setExifOrientation(exif, 1)
+				}
 			}
 		}
 	}

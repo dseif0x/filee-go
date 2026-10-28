@@ -223,9 +223,6 @@ func decodeJPEG(data []byte) (*Picture, error) {
 		return nil, fmt.Errorf("JPEG: %w", err)
 	}
 	f := NewFrame(img)
-	if y, ok := img.(*image.YCbCr); ok && y.SubsampleRatio == image.YCbCrSubsampleRatio444 && isGray(f.Img) {
-		f.Gray = false // a colour JPEG that happens to be grey stays colour
-	}
 	f.Meta = jpegMeta(data)
 	return one(f), nil
 }

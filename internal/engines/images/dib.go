@@ -77,9 +77,6 @@ func decodeDIB(dib []byte, icon bool, pixelOffset int) (*image.NRGBA, bool, erro
 		masks = [4]uint32{0x7C00, 0x03E0, 0x001F, 0}
 	case bpp == 32:
 		masks = [4]uint32{0xFF0000, 0xFF00, 0xFF, 0}
-		if hsize >= 56 && compression == 0 {
-			masks[3] = 0
-		}
 	}
 	var palette [][4]uint8
 	if bpp <= 8 {
@@ -340,7 +337,8 @@ func decodeICO(data []byte) (*Picture, error) {
 				firstErr = err
 				continue
 			}
-			f = &Frame{Img: img, Alpha: alpha || true}
+			_ = alpha
+			f = &Frame{Img: img, Alpha: true} // an icon is a picture with alpha
 		}
 		p.Frames = append(p.Frames, f)
 	}

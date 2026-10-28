@@ -6,6 +6,7 @@ import (
 	"github.com/dseif0x/filee-go/internal/convert"
 	"github.com/dseif0x/filee-go/internal/engines/icns"
 	"github.com/dseif0x/filee-go/internal/engines/images"
+	"github.com/dseif0x/filee-go/internal/engines/wic"
 )
 
 // Converters returns a fresh instance of every engine.
@@ -14,6 +15,7 @@ func Converters() []convert.Converter {
 		// Engines add themselves here, one line each (keep the groups).
 		images.New(),
 		icns.New(),
+		wic.New(),
 	}
 }
 

@@ -5,6 +5,7 @@ package all
 import (
 	"github.com/dseif0x/filee-go/internal/convert"
 	"github.com/dseif0x/filee-go/internal/engines/data"
+	"github.com/dseif0x/filee-go/internal/engines/fonts"
 	"github.com/dseif0x/filee-go/internal/engines/subtitles"
 )
 
@@ -12,6 +13,7 @@ import (
 func Converters() []convert.Converter {
 	return []convert.Converter{
 		// Engines add themselves here, one line each (keep the groups).
+		fonts.New(),
 		data.New(),
 		subtitles.New(),
 	}

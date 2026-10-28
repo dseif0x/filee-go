@@ -288,6 +288,11 @@ func (r *renderer) drawNode(n *Node, c context) {
 // withEffects applies filter, clip-path, mask and opacity around draw.
 func (r *renderer) withEffects(n *Node, c context, draw func(context)) {
 	st := c.st
+	if ie, ok := r.dev.(interface{ IgnoresEffects() bool }); ok && ie.IgnoresEffects() {
+		// Outline devices (CAD output) take the geometry only.
+		draw(c)
+		return
+	}
 	if st.filter != "" {
 		filters, ok := r.resolveFilters(st.filter)
 		if !ok {

@@ -209,6 +209,9 @@ func (c *outlineCollector) Stroke(p *gfx.Path, m gfx.Matrix, s *gfx.StrokeStyle,
 	c.add(p, m, paint, true)
 }
 
+// IgnoresEffects: filters, clips and masks are not drawn; only geometry is kept.
+func (c *outlineCollector) IgnoresEffects() bool { return true }
+
 // Images, clips, groups and masks have no outline to write.
 func (c *outlineCollector) DrawImage(img image.Image, m gfx.Matrix, opacity float64) {}
 func (c *outlineCollector) PushClip(p *gfx.Path, m gfx.Matrix, rule gfx.FillRule)    {}

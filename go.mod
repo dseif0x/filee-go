@@ -18,6 +18,7 @@ require (
 	github.com/ncruces/rethinkraw v0.10.7
 	github.com/pdfcpu/pdfcpu v0.16.4
 	github.com/pelletier/go-toml/v2 v2.4.3
+	github.com/qmuntal/gltf v0.29.0
 	github.com/tetratelabs/wazero v1.12.0
 	github.com/ulikunitz/xz v0.5.17
 	github.com/woozymasta/bcn v0.7.0

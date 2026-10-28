@@ -7,12 +7,14 @@ import (
 	"github.com/dseif0x/filee-go/internal/engines/data"
 	"github.com/dseif0x/filee-go/internal/engines/docxwriter"
 	"github.com/dseif0x/filee-go/internal/engines/fonts"
+	"github.com/dseif0x/filee-go/internal/engines/geo"
 	"github.com/dseif0x/filee-go/internal/engines/ghostscript"
 	"github.com/dseif0x/filee-go/internal/engines/icns"
 	"github.com/dseif0x/filee-go/internal/engines/images"
 	"github.com/dseif0x/filee-go/internal/engines/libreoffice"
 	"github.com/dseif0x/filee-go/internal/engines/markdown"
 	"github.com/dseif0x/filee-go/internal/engines/media"
+	"github.com/dseif0x/filee-go/internal/engines/model3d"
 	"github.com/dseif0x/filee-go/internal/engines/ocr"
 	_ "github.com/dseif0x/filee-go/internal/engines/ofd" // the OFD document reader
 	"github.com/dseif0x/filee-go/internal/engines/office"
@@ -32,6 +34,9 @@ func Converters() []convert.Converter {
 		subtitles.New(),
 		// Media
 		media.New(),
+		// 3D models and geospatial data (C# order: after FFmpeg and CAD)
+		model3d.New(),
+		geo.New(),
 		// OCR: Apple Vision first, so a Mac needs no download for the languages it reads.
 		ocr.NewVision(),
 		ocr.NewTesseract(),

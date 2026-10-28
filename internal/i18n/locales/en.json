@@ -16,6 +16,7 @@
   "tray.pause": "Pause shortcuts",
   "tray.resume": "Resume shortcuts",
   "tray.quit": "Quit",
+  "app.close_to_menu_bar": "Close to Menu Bar",
   "tray.update": "Update to {0}",
   "tray.tooltip": "Filee: hold {0} and drag files",
   "close.title": "Keep Filee running?",

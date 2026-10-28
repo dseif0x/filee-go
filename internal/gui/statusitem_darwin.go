@@ -91,7 +91,7 @@ func (s *statusItem) refresh(st *settings.AppSettings) {
 	}
 	ns.Send(ns.Send(s.item, "button"), "setToolTip:", ns.String(tip))
 	// Without a Dock icon the menu bar icon is the only way in: it stays then.
-	ns.Send(s.item, "setVisible:", st.ShowMenuBarIcon || !st.ShowInDock)
+	ns.Send(s.item, "setVisible:", st.ShowMenuBarIcon || !st.ShowInDock || s.m.inMenuBarOnly)
 }
 
 // modifierText writes modifiers as Mac keyboards label them.

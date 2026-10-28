@@ -49,8 +49,36 @@ func newWebWindow(title string, w, h float64) (window, webview ns.ID) {
 		ns.Send(window, "setContentView:", webview)
 		ns.Release(webview)
 	}
+	ns.Send(window, "setDelegate:", windowDelegate())
 	ns.Send(window, "center")
 	return window, webview
+}
+
+var windowDelegateClass objc.Class
+var windowDelegateObj ns.ID
+
+// windowDelegate is shared by Filee's windows: closing the last one takes
+// Filee out of the Dock (it stays in the menu bar).
+func windowDelegate() ns.ID {
+	if windowDelegateObj != 0 {
+		return windowDelegateObj
+	}
+	if windowDelegateClass == 0 {
+		var err error
+		windowDelegateClass, err = objc.RegisterClass("FileeWindowDelegate", objc.GetClass("NSObject"), nil, nil, []objc.MethodDef{
+			{Cmd: ns.Sel("windowWillClose:"), Fn: func(_ objc.ID, _ objc.SEL, notification objc.ID) {
+				if current != nil {
+					current.windowClosed(ns.Send(notification, "object"))
+				}
+			}},
+		})
+		if err != nil {
+			panic(err)
+		}
+	}
+	// Windows don't retain their delegate: this one lives as long as the app.
+	windowDelegateObj = ns.Send(ns.ID(windowDelegateClass), "new")
+	return windowDelegateObj
 }
 
 func load(webview ns.ID, address string) {

@@ -65,6 +65,12 @@ type macApp struct {
 	}
 	pendingFiles []string
 	pendingTimer func()
+
+	// quitting is set by the menu bar's Quit: only then does Filee exit
+	// (and when the system logs out or shuts down).
+	quitting bool
+	// inMenuBarOnly: the Dock icon was closed; Filee lives on in the menu bar.
+	inMenuBarOnly bool
 }
 
 var current *macApp
@@ -269,11 +275,58 @@ func (m *macApp) openSettings(page string) {
 	if m.applied.dock != nil && *m.applied.dock {
 		m.mac.SetShowInDock(true)
 	}
+	if m.inMenuBarOnly {
+		m.inMenuBarOnly = false
+		m.status.refresh(m.app.Settings())
+	}
 	m.windows.showSettings(page)
+}
+
+// toMenuBar closes Filee's windows and its Dock icon; it keeps running in
+// the menu bar. Quit in the Dock or the app menu (⌘Q) does this, and so
+// does closing the last window.
+func (m *macApp) toMenuBar() {
+	for _, w := range ns.Array(ns.Send(m.nsapp, "windows")) {
+		if titledWindow(w) && ns.Bool(w, "isVisible") {
+			ns.Send(w, "orderOut:", objc.ID(0))
+		}
+	}
+	m.inMenuBarOnly = true
+	// The menu bar icon is the way back in, even when the settings hide it.
+	m.status.refresh(m.app.Settings())
+	m.mac.SetShowInDock(false)
+}
+
+// titledWindow tells Filee's own windows (settings, tools) from the donut
+// panel and the menu bar's windows.
+func titledWindow(w ns.ID) bool { return ns.Uint(w, "styleMask")&styleTitled != 0 }
+
+// windowClosed drops the Dock icon when the last of Filee's windows closed.
+func (m *macApp) windowClosed(closing ns.ID) {
+	for _, w := range ns.Array(ns.Send(m.nsapp, "windows")) {
+		if w != closing && titledWindow(w) && ns.Bool(w, "isVisible") {
+			return
+		}
+	}
+	// After the close finished, so the window doesn't flash back with the policy change.
+	m.after(0, m.toMenuBar)
+}
+
+// systemQuit reports whether the quit request comes from logging out,
+// restarting or shutting down (its Apple event names a reason), which Filee
+// must not refuse.
+func systemQuit() bool {
+	event := ns.Send(ns.Send(ns.Class("NSAppleEventManager"), "sharedAppleEventManager"), "currentAppleEvent")
+	if event == 0 {
+		return false
+	}
+	const keyQuitReason = 0x7768793F // 'why?'
+	return ns.Send(event, "attributeDescriptorForKeyword:", uint32(keyQuitReason)) != 0
 }
 
 func (m *macApp) quit() {
 	m.log.Info("quitting")
+	m.quitting = true
 	m.triggers.stop()
 	m.app.Close()
 	ns.Send(m.nsapp, "terminate:", objc.ID(0))
@@ -335,7 +388,8 @@ func (m *macApp) buildMainMenu() {
 		return submenu
 	}
 	appMenu := sub("Filee")
-	item(appMenu, m.app.Text("tray.quit")+" Filee", "terminate:", "q")
+	// terminate: is answered by applicationShouldTerminate:, which closes to the menu bar.
+	item(appMenu, m.app.Text("app.close_to_menu_bar"), "terminate:", "q")
 	edit := sub("Edit")
 	item(edit, "Undo", "undo:", "z")
 	item(edit, "Redo", "redo:", "Z")
@@ -365,6 +419,16 @@ func newAppDelegate() ns.ID {
 				return true
 			}},
 			{Cmd: ns.Sel("applicationShouldTerminateAfterLastWindowClosed:"), Fn: func(objc.ID, objc.SEL, objc.ID) bool { return false }},
+			{Cmd: ns.Sel("applicationShouldTerminate:"), Fn: func(objc.ID, objc.SEL, objc.ID) uint {
+				const terminateCancel, terminateNow = 0, 1
+				if current == nil || current.quitting || systemQuit() {
+					return terminateNow
+				}
+				// Quit in the Dock or ⌘Q: out of the Dock, still in the menu bar.
+				current.log.Info("closed to the menu bar")
+				current.toMenuBar()
+				return terminateCancel
+			}},
 			{Cmd: ns.Sel("application:openURLs:"), Fn: func(_ objc.ID, _ objc.SEL, _ objc.ID, urls objc.ID) {
 				var files []string
 				for _, u := range ns.Array(urls) {

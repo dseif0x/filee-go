@@ -228,7 +228,7 @@ func (s *cpioSource) List() ([]member, error) {
 }
 
 func (s *cpioSource) Walk(visit func(member, io.Reader) error) error { return s.each(visit) }
-func (s *cpioSource) Close() error                                  { return nil }
+func (s *cpioSource) Close() error                                   { return nil }
 
 // ---- ar (DEB packages: debian-binary, control.tar.*, data.tar.*) ----
 
@@ -303,7 +303,7 @@ func (s *arSource) List() ([]member, error) {
 }
 
 func (s *arSource) Walk(visit func(member, io.Reader) error) error { return s.each(visit) }
-func (s *arSource) Close() error                                  { return nil }
+func (s *arSource) Close() error                                   { return nil }
 
 // ---- RPM: the payload after the lead, signature and header ----
 

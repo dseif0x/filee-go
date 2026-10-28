@@ -2,8 +2,8 @@ package archive
 
 import (
 	"archive/tar"
-	"bytes"
 	"archive/zip"
+	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -405,4 +405,4 @@ func (s *tarSource) List() ([]member, error) {
 }
 
 func (s *tarSource) Walk(visit func(member, io.Reader) error) error { return s.each(visit) }
-func (s *tarSource) Close() error                                  { return nil }
+func (s *tarSource) Close() error                                   { return nil }

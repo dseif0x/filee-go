@@ -54,9 +54,9 @@ const (
 )
 
 type eggBlockInfo struct {
-	method              int
-	size, packed, data  int64
-	crc                 uint32
+	method             int
+	size, packed, data int64
+	crc                uint32
 }
 
 type eggItem struct {

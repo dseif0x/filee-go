@@ -4,8 +4,12 @@ package all
 
 import (
 	"github.com/dseif0x/filee-go/internal/convert"
+	"github.com/dseif0x/filee-go/internal/engines/archive"
+	"github.com/dseif0x/filee-go/internal/engines/calibre"
 	"github.com/dseif0x/filee-go/internal/engines/data"
 	"github.com/dseif0x/filee-go/internal/engines/docxwriter"
+	"github.com/dseif0x/filee-go/internal/engines/ebook"
+	"github.com/dseif0x/filee-go/internal/engines/email"
 	"github.com/dseif0x/filee-go/internal/engines/fonts"
 	"github.com/dseif0x/filee-go/internal/engines/geo"
 	"github.com/dseif0x/filee-go/internal/engines/ghostscript"
@@ -48,16 +52,21 @@ func Converters() []convert.Converter {
 		pdf.PdfText{},
 		pdf.PdfSlides{},
 		pdf.PdfTables{},
+		email.New(),
 		// office
 		markdown.New(),
 		spreadsheet.New(),
 		office.New(),
+		archive.New(),
 		docxwriter.New(),
+		// e-books before Pandoc (C# order); calibre ranks last
+		ebook.New(),
 		pandoc.New(),
 		libreoffice.New(),
 		images.New(),
 		icns.New(),
 		wic.New(),
+		calibre.New(),
 	}
 }
 

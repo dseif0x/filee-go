@@ -55,6 +55,8 @@ func (*Converter) MaxParallelism() int { return 0 }
 // Transforms: only when rendering to an image (not to PDF or between SVG and SVGZ).
 func (*Converter) Transforms(from, to string) bool { return slices.Contains(imgout.Writable, to) }
 
+// The engine also draws Windows metafiles (see metafiles.go).
+
 func (*Converter) Edges() []convert.Edge {
 	e := []convert.Edge{
 		convert.E("svg", "pdf"),
@@ -75,6 +77,7 @@ func (*Converter) Edges() []convert.Edge {
 		// HP-GL plot files: their pen moves as lines.
 		convert.E("plt", "svg"),
 	)
+	e = append(e, metafileEdges()...)
 	// Raster images are traced (never vector files or documents).
 	for _, s := range imgout.Readable {
 		e = append(e, convert.Edge{From: s, To: "svg", Cost: TraceCost, ImageSourcesOnly: true})
@@ -83,13 +86,15 @@ func (*Converter) Edges() []convert.Edge {
 }
 
 func (*Converter) Status() convert.Status {
-	return convert.Available("SVG/SVGZ, tracing, DST, HP-GL, AI", "built-in")
+	return convert.Available("SVG/SVGZ, tracing, DST, HP-GL, AI, EMF/WMF", "built-in")
 }
 
 func (c *Converter) Convert(ctx context.Context, step *convert.Step, progress convert.Progress) ([]string, error) {
 	var out []string
 	var err error
 	switch {
+	case isMetafile(step.From):
+		out, err = convertMetafile(ctx, step, progress)
 	case step.From == "ai" && step.To == "pdf":
 		out, err = illustrator(ctx, step, progress)
 	case step.From == "svg" && step.To == "svgz":

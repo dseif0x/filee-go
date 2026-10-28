@@ -3,6 +3,7 @@ package vector
 import (
 	"bytes"
 	"context"
+	"encoding/binary"
 	"image"
 	"image/color"
 	"image/png"
@@ -230,5 +231,35 @@ func TestEdges(t *testing.T) {
 	}
 	if !trace || !png {
 		t.Fatal("missing edges")
+	}
+}
+
+func TestWmfToPngAndPdf(t *testing.T) {
+	var b bytes.Buffer
+	w := func(v ...any) {
+		for _, x := range v {
+			binary.Write(&b, binary.LittleEndian, x)
+		}
+	}
+	w(uint32(0x9AC6CDD7), uint16(0), int16(0), int16(0), int16(1000), int16(500), uint16(1000), uint32(0), uint16(0))
+	w(uint16(1), uint16(9), uint16(0x300), uint32(0), uint16(1), uint32(0), uint16(0))
+	w(uint32(7), uint16(0x02FC), int16(0), int16(0xFF), int16(0), int16(0))
+	w(uint32(4), uint16(0x012D), int16(0))
+	w(uint32(7), uint16(0x041B), int16(400), int16(900), int16(100), int16(100))
+	w(uint32(3), uint16(0))
+	in := write(t, "a.wmf", b.Bytes())
+	s, _ := step(t, in, "wmf", "png")
+	out := run(t, s)
+	f, _ := os.Open(out[0])
+	img, err := png.Decode(f)
+	f.Close()
+	if err != nil || img.Bounds().Dx() != 150 {
+		t.Fatalf("%v %v", err, img.Bounds())
+	}
+	s2, _ := step(t, in, "wmf", "pdf")
+	pdfOut := run(t, s2)
+	data, _ := os.ReadFile(pdfOut[0])
+	if !bytes.HasPrefix(data, []byte("%PDF")) {
+		t.Fatal("no pdf")
 	}
 }

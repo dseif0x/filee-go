@@ -9,6 +9,7 @@ import (
 	"github.com/dseif0x/filee-go/internal/engines/ghostscript"
 	"github.com/dseif0x/filee-go/internal/engines/media"
 	"github.com/dseif0x/filee-go/internal/engines/ocr"
+	"github.com/dseif0x/filee-go/internal/engines/pdf"
 	"github.com/dseif0x/filee-go/internal/engines/subtitles"
 )
 
@@ -26,6 +27,12 @@ func Converters() []convert.Converter {
 		ocr.NewTesseract(),
 		// PostScript
 		ghostscript.New(),
+		// PDF (C# order: PdfSharp, Pdfium near the top; text, slides, tables after the DOCX writer).
+		pdf.PdfSharp{},
+		pdf.Pdfium{},
+		pdf.PdfText{},
+		pdf.PdfSlides{},
+		pdf.PdfTables{},
 	}
 }
 

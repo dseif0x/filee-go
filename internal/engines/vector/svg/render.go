@@ -1036,7 +1036,8 @@ func (r *renderer) patternFill(p *gfx.Path, c context, rule gfx.FillRule, pat *N
 	i0, i1 := math.Floor((area.X0-x)/w), math.Ceil((area.X1-x)/w)
 	j0, j1 := math.Floor((area.Y0-y)/h), math.Ceil((area.Y1-y)/h)
 	tiles := (i1 - i0) * (j1 - j0)
-	if tiles > 200_000 || math.IsNaN(tiles) {
+	_, native := r.dev.(gfx.PatternDevice)
+	if !native && (tiles > 200_000 || math.IsNaN(tiles)) {
 		return
 	}
 	var inner gfx.Matrix
@@ -1048,14 +1049,28 @@ func (r *renderer) patternFill(p *gfx.Path, c context, rule gfx.FillRule, pat *N
 	} else {
 		inner = gfx.Identity
 	}
+	pst := r.styleOf(content, c.lc)
+	base := c.m.Mul(pt)
+	if pd, ok := r.dev.(gfx.PatternDevice); ok {
+		// The device repeats one cell itself (a PDF tiling pattern).
+		pd.FillTiled(p, c.m, rule, base.Mul(gfx.Translate(x, y)), w, h, opacity, func(d gfx.Device) {
+			saved := r.dev
+			r.dev = d
+			cell := gfx.NewPath()
+			cell.Rect(0, 0, w, h)
+			d.PushClip(cell, gfx.Identity, gfx.NonZero)
+			r.drawChildren(content, context{m: inner, st: pst, lc: c.lc})
+			d.PopClip()
+			r.dev = saved
+		})
+		return
+	}
 	r.dev.PushClip(p, c.m, rule)
 	defer r.dev.PopClip()
 	if opacity < 1 {
 		r.dev.PushGroup(opacity)
 		defer r.dev.PopGroup()
 	}
-	pst := r.styleOf(content, c.lc)
-	base := c.m.Mul(pt)
 	for j := j0; j < j1; j++ {
 		for i := i0; i < i1; i++ {
 			tx, ty := x+i*w, y+j*h

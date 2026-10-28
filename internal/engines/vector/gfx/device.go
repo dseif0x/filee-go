@@ -130,3 +130,10 @@ type Device interface {
 	BeginMaskContent()
 	PopMask()
 }
+
+// PatternDevice can fill with a repeating tile natively (PDF tiling patterns).
+// tile maps the cell (0,0)–(w,h) to the device; draw draws one cell in cell
+// coordinates onto the device it is given.
+type PatternDevice interface {
+	FillTiled(p *Path, m Matrix, rule FillRule, tile Matrix, w, h float64, opacity float64, draw func(Device))
+}

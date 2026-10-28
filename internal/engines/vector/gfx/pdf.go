@@ -781,3 +781,32 @@ func xmpMetadata(info PDFInfo, t time.Time) string {
 </x:xmpmeta>
 <?xpacket end="w"?>`
 }
+
+// FillTiled fills with a tiling pattern whose cell is drawn by draw.
+func (p *PDFPage) FillTiled(path *Path, m Matrix, rule FillRule, tile Matrix, w, h float64, opacity float64, draw func(Device)) {
+	if path.Empty() || !m.Finite() || !tile.Finite() || w <= 0 || h <= 0 {
+		return
+	}
+	p.stack = append(p.stack, &pdfContent{})
+	draw(p)
+	cell := p.stack[len(p.stack)-1]
+	p.stack = p.stack[:len(p.stack)-1]
+	pm := p.patternMatrix().Mul(tile)
+	dict := fmt.Sprintf("/Type/Pattern/PatternType 1/PaintType 1/TilingType 1/BBox[0 0 %s %s]/XStep %s/YStep %s/Resources %d 0 R/Matrix[%s %s %s %s %s %s]",
+		num(w), num(h), num(w), num(h), p.doc.resRef, num(pm.A), num(pm.B), num(pm.C), num(pm.D), num(pm.E), num(pm.F))
+	ref := p.doc.add(p.doc.stream(dict, cell.buf.Bytes(), true))
+	name := p.doc.name("P")
+	p.doc.patterns[ref] = name
+	op := "f\n"
+	if rule == EvenOdd {
+		op = "f*\n"
+	}
+	b := p.out()
+	b.WriteString("q\n")
+	if opacity < 1 {
+		b.WriteString("/" + p.doc.alphaState(opacity, opacity) + " gs\n")
+	}
+	b.WriteString("/Pattern cs /" + name + " scn\n")
+	writePath(b, path, m)
+	b.WriteString(op + "Q\n")
+}

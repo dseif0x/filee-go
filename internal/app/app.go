@@ -838,3 +838,20 @@ func (a *App) Retry(jobID string) (*jobs.Job, error) {
 	a.queue.Submit(j)
 	return j, nil
 }
+
+// RecordHistory adds a result made outside the job queue (the crop tool, the
+// PDF page editor) to the history.
+func (a *App) RecordHistory(e *history.Entry) error {
+	if e == nil {
+		return errors.New("no entry")
+	}
+	a.mu.Lock()
+	recorded := a.store.Settings.KeepHistory
+	a.store.Settings.SuccessfulConversions++
+	err := a.store.AddHistory(e)
+	a.mu.Unlock()
+	if recorded {
+		a.emit(Event{Kind: HistoryChanged})
+	}
+	return err
+}

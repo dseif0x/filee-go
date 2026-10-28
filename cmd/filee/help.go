@@ -23,7 +23,11 @@ func helpText(command string) string {
 		return "Usage: filee app [--background] [--selftest] [files...]\n\nStarts the Filee desktop app (macOS).\n\n" +
 			"  --background  Start without a window (sign-in)\n" +
 			"  --selftest    Check the native macOS parts without user interaction, print the results and exit\n" +
+			"  --web-only    Open the settings and tools as a local web page instead (also where there is no desktop app)\n" +
+			"  --no-browser  With --web-only: print the address instead of opening the browser\n" +
 			"  files         Open the donut for these files\n"
+	case "settings":
+		return "Usage: filee settings [<page>] [--no-browser]\n\nOpens Filee's settings in the browser (a page only this computer can reach) and keeps\nthe watch folders running until Ctrl+C. Pages: home, history, general, triggers, toolbar,\npresets, watch, theme, engines, about.\n"
 	}
 	return helpGeneral
 }
@@ -37,7 +41,8 @@ Usage:
   filee formats [<format>]
   filee presets
   filee engines
-  filee app
+  filee app [--web-only]
+  filee settings [<page>]
   filee help [<command>]
   filee version
 

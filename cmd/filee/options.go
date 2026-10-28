@@ -24,10 +24,12 @@ type options struct {
 	settle        float64 // < 0 when not given
 	background    bool    // app: started at sign-in, no window
 	selftest      bool    // app: exercise the native bindings and exit
+	webOnly       bool
+	noBrowser     bool
 	err           string
 }
 
-var commands = []string{"convert", "watch", "formats", "presets", "engines", "app", "help", "version"}
+var commands = []string{"convert", "watch", "formats", "presets", "engines", "app", "settings", "help", "version"}
 
 func parseOptions(args []string) *options {
 	o := &options{command: "help", settle: -1}
@@ -104,6 +106,10 @@ func parseOptions(args []string) *options {
 			o.background = true
 		case "--selftest", "--self-test":
 			o.selftest = true
+		case "--web-only":
+			o.webOnly = true
+		case "--no-browser":
+			o.noBrowser = true
 		case "-h", "--help":
 			o.inputs = append([]string{o.command}, o.inputs...)
 			o.command = "help"

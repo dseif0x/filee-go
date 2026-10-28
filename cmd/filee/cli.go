@@ -8,6 +8,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -69,8 +70,16 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer, newApp fu
 		return formatsCmd(o, a, stdout, stderr)
 	case "engines":
 		return enginesCmd(a, stdout)
+	case "settings":
+		return webCmd(ctx, o, a, stdout, stderr)
 	case "app":
-		if err := gui.RunWith(a, gui.Options{Background: o.background, SelfTest: o.selftest, Files: o.inputs}); err != nil {
+		if o.webOnly {
+			return webCmd(ctx, o, a, stdout, stderr)
+		}
+		if err := gui.RunWith(a, gui.Options{Background: o.background, SelfTest: o.selftest, Files: o.inputs}); errors.Is(err, gui.ErrNotBuilt) {
+			// No desktop app for this OS: the settings open in the browser instead.
+			return webCmd(ctx, o, a, stdout, stderr)
+		} else if err != nil {
 			fmt.Fprintf(stderr, "filee: %v\n", err)
 			return exitUsage
 		}

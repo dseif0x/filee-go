@@ -3,6 +3,7 @@ package spreadsheet
 import (
 	"archive/zip"
 	"fmt"
+	"hash/crc32"
 	"io"
 	"math"
 	"os"
@@ -76,13 +77,14 @@ func WriteZip(path string, parts [][2]string) error {
 	}
 	zw := zip.NewWriter(f)
 	for _, p := range parts {
-		method := zip.Deflate
+		var err error
 		if p[0] == "mimetype" {
-			method = zip.Store
-		}
-		w, err := zw.CreateHeader(&zip.FileHeader{Name: p[0], Method: method})
-		if err == nil {
-			_, err = io.WriteString(w, p[1])
+			err = StoreEntry(zw, p[0], []byte(p[1]))
+		} else {
+			var w io.Writer
+			if w, err = zw.CreateHeader(&zip.FileHeader{Name: p[0], Method: zip.Deflate}); err == nil {
+				_, err = io.WriteString(w, p[1])
+			}
 		}
 		if err != nil {
 			zw.Close()
@@ -420,4 +422,17 @@ func add(list *[]string, xml string) int {
 	}
 	*list = append(*list, xml)
 	return len(*list) - 1
+}
+
+// StoreEntry writes an uncompressed entry without a data descriptor, as the
+// OpenDocument mimetype must be (LibreOffice refuses stored entries with one).
+func StoreEntry(zw *zip.Writer, name string, data []byte) error {
+	h := &zip.FileHeader{Name: name, Method: zip.Store, CRC32: crc32.ChecksumIEEE(data),
+		CompressedSize64: uint64(len(data)), UncompressedSize64: uint64(len(data))}
+	w, err := zw.CreateRaw(h)
+	if err != nil {
+		return err
+	}
+	_, err = w.Write(data)
+	return err
 }

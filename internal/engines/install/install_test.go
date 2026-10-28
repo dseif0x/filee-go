@@ -256,3 +256,26 @@ func TestTrimming(t *testing.T) {
 		t.Error(left)
 	}
 }
+
+// Every Mac download is the build of its own architecture (or a universal one).
+func TestMacDownloadsMatchTheirArchitecture(t *testing.T) {
+	for rid, want := range map[string][]string{"osx-arm64": {"aarch64", "arm64"}, "osx-x64": {"x86_64", "x86-64"}} {
+		c := ComponentsFor(rid, "")
+		for _, id := range []string{"rhwp", "7zip", "pandoc", "libreoffice"} {
+			if _, ok := c[id]; !ok {
+				t.Errorf("%s has no %s download", rid, id)
+			}
+		}
+		for id, comp := range c {
+			if id == "7zip" || id == "calibre" {
+				continue // universal builds
+			}
+			if !strings.Contains(comp.URL, want[0]) && !strings.Contains(comp.URL, want[1]) {
+				t.Errorf("%s %s: %s", rid, id, comp.URL)
+			}
+		}
+	}
+	if nativeArch("arm64") != "arm64" {
+		t.Error("arm64 stays arm64")
+	}
+}

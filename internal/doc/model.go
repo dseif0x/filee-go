@@ -393,3 +393,27 @@ func Val[T any](p *T, def T) T {
 	}
 	return *p
 }
+
+func eq[T comparable](a, b *T) bool { return a == nil && b == nil || a != nil && b != nil && *a == *b }
+
+// Equal compares two formats by value.
+func (f CharFormat) Equal(g CharFormat) bool {
+	return eq(f.Bold, g.Bold) && eq(f.Italic, g.Italic) && eq(f.Underline, g.Underline) && eq(f.Strike, g.Strike) &&
+		eq(f.Superscript, g.Superscript) && eq(f.Subscript, g.Subscript) && eq(f.Size, g.Size) && eq(f.Font, g.Font) &&
+		eq(f.EastAsianFont, g.EastAsianFont) && eq(f.Color, g.Color) && eq(f.Shade, g.Shade) && eq(f.Spacing, g.Spacing)
+}
+
+// MergeTexts joins neighbouring texts of the same format.
+func MergeTexts(inlines []Inline) []Inline {
+	var out []Inline
+	for _, in := range inlines {
+		if t, ok := in.(*Text); ok && len(out) > 0 {
+			if p, ok := out[len(out)-1].(*Text); ok && p.Format.Equal(t.Format) {
+				out[len(out)-1] = &Text{Text: p.Text + t.Text, Format: p.Format}
+				continue
+			}
+		}
+		out = append(out, in)
+	}
+	return out
+}

@@ -76,7 +76,7 @@ func newParagraph(ctx mdCtx) *doc.Paragraph {
 
 func (r *reader) paragraph(n ast.Node, ctx mdCtx) *doc.Paragraph {
 	p := newParagraph(ctx)
-	p.Inlines = r.inlines(n, nil, doc.CharFormat{})
+	p.Inlines = doc.MergeTexts(r.inlines(n, nil, doc.CharFormat{}))
 	return p
 }
 

@@ -371,6 +371,10 @@ func run(ctx context.Context, gs string, device []string, outputFile, input stri
 		if errors.As(err, &t) {
 			return err
 		}
+		var missing *tools.RuntimeMissingError
+		if errors.As(err, &missing) {
+			return convert.Refuse(tools.RuntimeMissingKey, missing.Error())
+		}
 		return fmt.Errorf("%s", strings.TrimSpace(fmt.Sprintf("Ghostscript failed (exit %d). %s", code, detail)))
 	}
 	return nil

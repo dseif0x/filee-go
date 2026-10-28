@@ -148,6 +148,10 @@ func (r *tesseractRun) toPdf(ctx context.Context, input, base string, dpi int) e
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
+		var missing *tools.RuntimeMissingError
+		if errors.As(err, &missing) {
+			return convert.Refuse(tools.RuntimeMissingKey, missing.Error())
+		}
 		return fmt.Errorf("Tesseract failed (exit %d). %s", code, stderr)
 	}
 	return nil

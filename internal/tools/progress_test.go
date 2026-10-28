@@ -132,3 +132,9 @@ func TestFolderWithPrograms(t *testing.T) {
 	}
 	Forget()
 }
+
+func TestMissingRuntimeExitCodes(t *testing.T) {
+	if !IsMissingRuntime(int(int32(-1073741515))) || !IsMissingRuntime(0xC0000139) || IsMissingRuntime(1) {
+		t.Error("exit codes")
+	}
+}

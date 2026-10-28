@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dseif0x/filee-go/internal/convert"
 	"github.com/dseif0x/filee-go/internal/tools"
 )
 
@@ -77,6 +78,10 @@ func RunFfmpeg(ctx context.Context, ffmpeg string, args []string, onPosition fun
 	var exit *tools.ExitError
 	if errors.As(err, &exit) {
 		return out, nil
+	}
+	var missing *tools.RuntimeMissingError
+	if errors.As(err, &missing) {
+		return out, convert.Refuse(tools.RuntimeMissingKey, missing.Error())
 	}
 	var stalled *tools.StalledError
 	if errors.As(err, &stalled) {

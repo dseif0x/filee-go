@@ -298,10 +298,34 @@ func Run(ctx context.Context, c Cmd) (*Result, error) {
 		return res, &TimeoutError{Program: filepath.Base(c.Path), Limit: c.Timeout}
 	}
 	var ee *exec.ExitError
+	if errors.As(err, &ee) && IsMissingRuntime(res.ExitCode) {
+		return res, &RuntimeMissingError{Program: filepath.Base(c.Path), Code: res.ExitCode}
+	}
 	if errors.As(err, &ee) {
 		return res, &ExitError{Program: filepath.Base(c.Path), Code: res.ExitCode, Stderr: tail(errb.String(), 2000)}
 	}
 	return res, err
+}
+
+// RuntimeMissingKey is the reason shown when Windows could not start a
+// program because a DLL it needs (the Microsoft C++ runtime) is missing.
+const RuntimeMissingKey = "error.runtime_missing"
+
+// IsMissingRuntime: Windows refused to start the program because of a missing
+// (0xC0000135) or outdated (0xC0000139) DLL.
+func IsMissingRuntime(code int) bool {
+	c := uint32(code)
+	return c == 0xC0000135 || c == 0xC0000139
+}
+
+// RuntimeMissingError is a program Windows could not start for a missing DLL.
+type RuntimeMissingError struct {
+	Program string
+	Code    int
+}
+
+func (e *RuntimeMissingError) Error() string {
+	return fmt.Sprintf("%s, 0x%08X (a runtime file it needs is missing)", e.Program, uint32(e.Code))
 }
 
 // StalledErrorKey is the reason shown when a program stopped writing anything

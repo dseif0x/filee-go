@@ -135,7 +135,7 @@ func TestCSVWithoutContactColumnsIsRefused(t *testing.T) {
 }
 
 func TestLongCombiningSequenceFoldsAndRoundTrips(t *testing.T) {
-	name := "e" + strings.Repeat("́", 40)
+	name := "e" + strings.Repeat("\u0301", 40)
 	text := writeVCard([]*contact{{FullName: name}})
 	has(t, text, "\r\n ")
 	for _, line := range strings.Split(text, "\r\n") {

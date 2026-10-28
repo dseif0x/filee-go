@@ -5,6 +5,7 @@ package all
 import (
 	"github.com/dseif0x/filee-go/internal/convert"
 	"github.com/dseif0x/filee-go/internal/engines/data"
+	"github.com/dseif0x/filee-go/internal/engines/subtitles"
 )
 
 // Converters returns a fresh instance of every engine.
@@ -12,6 +13,7 @@ func Converters() []convert.Converter {
 	return []convert.Converter{
 		// Engines add themselves here, one line each (keep the groups).
 		data.New(),
+		subtitles.New(),
 	}
 }
 

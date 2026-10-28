@@ -83,7 +83,7 @@ func encodeFrame(f *Frame, format, ext string) ([]byte, error) {
 		if !f.Alpha {
 			img = rgbaView(flatten(f.Img, colorWhite))
 		}
-		if err := avif.Encode(&buf, img, avif.Options{Quality: quality, QualityAlpha: quality, Speed: 6, Lossless: quality == 100}); err != nil {
+		if err := avif.Encode(&buf, img, avif.Options{Quality: quality, QualityAlpha: quality, Speed: 8, Lossless: quality == 100}); err != nil {
 			return nil, fmt.Errorf("AVIF: %w", err)
 		}
 		return buf.Bytes(), nil

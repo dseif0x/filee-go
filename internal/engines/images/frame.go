@@ -107,6 +107,15 @@ func ToNRGBA(img image.Image) *image.NRGBA {
 			}
 		}
 		return out
+	case *image.YCbCr, *image.RGBA:
+		// image/draw has fast paths into *image.RGBA; opaque RGBA is the same bytes as NRGBA
+		rgba := image.NewRGBA(out.Rect)
+		draw.Draw(rgba, rgba.Rect, img, b.Min, draw.Src)
+		if _, ok := img.(*image.YCbCr); ok {
+			out.Pix = rgba.Pix
+			return out
+		}
+		return unpremultiplied(rgba)
 	case *image.CMYK:
 		for y := 0; y < b.Dy(); y++ {
 			row := src.Pix[src.PixOffset(b.Min.X, b.Min.Y+y):]

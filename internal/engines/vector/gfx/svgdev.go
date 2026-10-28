@@ -207,6 +207,11 @@ func (s *SVGWriter) PushGroup(opacity float64) {
 	}
 }
 
+// PushBlendGroup starts a group composited with a blend mode.
+func (s *SVGWriter) PushBlendGroup(opacity float64, mode BlendMode) {
+	fmt.Fprintf(s.out(), `<g opacity="%s" style="mix-blend-mode:%s">`+"\n", num(opacity), mode)
+}
+
 func (s *SVGWriter) PopGroup() { s.out().WriteString("</g>\n") }
 
 func (s *SVGWriter) PushMask(kind MaskKind, opacity float64) {

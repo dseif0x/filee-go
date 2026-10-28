@@ -110,6 +110,7 @@ type PDFPage struct {
 }
 
 type pdfContent struct {
+	blend    BlendMode
 	buf      bytes.Buffer
 	isMask   bool
 	mask     bool
@@ -520,6 +521,11 @@ func (p *PDFPage) PushGroup(opacity float64) {
 	p.stack = append(p.stack, &pdfContent{opacity: opacity})
 }
 
+// PushBlendGroup starts a group composited with a blend mode.
+func (p *PDFPage) PushBlendGroup(opacity float64, mode BlendMode) {
+	p.stack = append(p.stack, &pdfContent{opacity: opacity, blend: mode})
+}
+
 func (p *PDFPage) PopGroup() {
 	if len(p.stack) < 2 {
 		return
@@ -542,6 +548,9 @@ func (p *PDFPage) PopGroup() {
 	b.WriteString("q\n")
 	if c.opacity < 1 {
 		b.WriteString("/" + p.doc.alphaState(c.opacity, c.opacity) + " gs\n")
+	}
+	if c.blend != BlendNormal {
+		b.WriteString("/" + p.doc.gstate("/BM/"+pdfBlendNames[c.blend]) + " gs\n")
 	}
 	b.WriteString("/" + p.doc.xobjects[form] + " Do\nQ\n")
 }

@@ -46,6 +46,8 @@ func (n *Node) Elements() []*Node {
 	return out
 }
 
+const svgNS = "http://www.w3.org/2000/svg"
+
 // ErrNotSVG is returned when the document has no <svg> root.
 var ErrNotSVG = errors.New("the file is not an SVG drawing (no <svg> element)")
 
@@ -90,6 +92,10 @@ func parseXML(data []byte, strict bool) (*Node, error) {
 			}
 		case xml.StartElement:
 			n := &Node{Name: t.Name.Local, Attrs: make(map[string]string, len(t.Attr))}
+			// Elements of other XML namespaces are not SVG and never drawn.
+			if t.Name.Space != "" && t.Name.Space != svgNS {
+				n.Name = "#foreign:" + t.Name.Local
+			}
 			for _, a := range t.Attr {
 				key := a.Name.Local
 				switch {

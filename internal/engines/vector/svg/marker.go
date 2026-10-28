@@ -180,7 +180,7 @@ func (r *renderer) drawMarker(mk *Node, at gfx.Point, angle, strokeWidth float64
 		return
 	}
 	defer r.leave(mk)
-	mst := computeStyle(mk, defaultStyle(), c.lc)
+	mst := r.styleOf(mk, c.lc)
 	lc := c.lc
 	mw := lc.resolveAttr(mk, "markerWidth", axisX, 3)
 	mh := lc.resolveAttr(mk, "markerHeight", axisY, 3)

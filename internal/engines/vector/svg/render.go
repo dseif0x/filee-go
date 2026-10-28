@@ -133,10 +133,15 @@ func (d *Document) Draw(dev gfx.Device, m gfx.Matrix, opt Options) {
 	}
 	r := &renderer{doc: d, dev: dev, fonts: d.fonts(), active: map[*Node]int{}, rootScale: m.MeanScale(), filterRes: opt.FilterResolution}
 	c := r.rootContext(m)
-	r.drawChildren(d.root, c)
+	if !c.st.display {
+		return
+	}
+	// Opacity, clipping, masks and filters on the root element apply to the whole drawing.
+	r.withEffects(d.root, c, func(c context) { r.drawChildren(d.root, c) })
 }
 
 type renderer struct {
+	styles    map[*Node]*style
 	doc       *Document
 	dev       gfx.Device
 	fonts     *gfx.Fonts
@@ -161,12 +166,13 @@ func (r *renderer) rootContext(m gfx.Matrix) context {
 	d := r.doc
 	lc := lengthContext{vw: d.Width, vh: d.Height, fontSize: 16}
 	st := computeStyle(d.root, defaultStyle(), lc)
+	m = m.Mul(r.transformOf(d.root, st, lc))
 	if d.hasViewBox {
 		m = m.Mul(viewBoxTransform(d.viewBox, d.root.Attr("preserveAspectRatio"), 0, 0, d.Width, d.Height))
 		lc.vw, lc.vh = d.viewBox[2], d.viewBox[3]
 	}
 	lc.fontSize = st.fontSize
-	return context{m: m, st: st, lc: lc}
+	return context{m: m, st: st, lc: lc, pst: defaultStyle(), plc: lc}
 }
 
 // nonRendered elements are only drawn when referenced.
@@ -186,8 +192,13 @@ func (r *renderer) drawChildren(n *Node, c context) {
 	}
 }
 
-func (r *renderer) transformOf(n *Node, st *style) gfx.Matrix {
+func (r *renderer) transformOf(n *Node, st *style, lc lengthContext) gfx.Matrix {
 	t := n.Attr("transform")
+	if n.Name == "linearGradient" || n.Name == "radialGradient" {
+		t = n.Attr("gradientTransform")
+	} else if n.Name == "pattern" {
+		t = n.Attr("patternTransform")
+	}
 	if st.transformCSS != "" {
 		t = st.transformCSS
 	}
@@ -198,11 +209,52 @@ func (r *renderer) transformOf(n *Node, st *style) gfx.Matrix {
 	if !m.Finite() {
 		return gfx.Identity
 	}
+	if o, ok := spec(n, "transform-origin"); ok {
+		ox, oy := transformOrigin(o, lc)
+		m = gfx.Translate(ox, oy).Mul(m).Mul(gfx.Translate(-ox, -oy))
+	}
 	return m
 }
 
+// transformOrigin reads "x y" of transform-origin (lengths, % of the viewport, keywords).
+func transformOrigin(v string, lc lengthContext) (float64, float64) {
+	f := strings.Fields(v)
+	val := func(s string, axis int) (float64, bool) {
+		switch s {
+		case "left", "top":
+			return 0, true
+		case "center":
+			return lc.resolve(Length{50, "%"}, axis), true
+		case "right":
+			return lc.resolve(Length{100, "%"}, axisX), true
+		case "bottom":
+			return lc.resolve(Length{100, "%"}, axisY), true
+		}
+		l, ok := parseLength(s)
+		if !ok {
+			return 0, false
+		}
+		return lc.resolve(l, axis), true
+	}
+	x, y := lc.resolve(Length{50, "%"}, axisX), lc.resolve(Length{50, "%"}, axisY)
+	if len(f) >= 1 {
+		if f[0] == "top" || f[0] == "bottom" {
+			y, _ = val(f[0], axisY)
+			if len(f) >= 2 {
+				x, _ = val(f[1], axisX)
+			}
+			return x, y
+		}
+		x, _ = val(f[0], axisX)
+	}
+	if len(f) >= 2 {
+		y, _ = val(f[1], axisY)
+	}
+	return x, y
+}
+
 func (r *renderer) drawNode(n *Node, c context) {
-	if nonRendered[n.Name] {
+	if nonRendered[n.Name] || !conditionsHold(n) {
 		return
 	}
 	// Guard against huge or self-referencing documents.
@@ -216,7 +268,7 @@ func (r *renderer) drawNode(n *Node, c context) {
 	}
 	lc := c.lc
 	lc.fontSize = st.fontSize
-	m := c.m.Mul(r.transformOf(n, st))
+	m := c.m.Mul(r.transformOf(n, st, c.lc))
 	if !m.Finite() || m.Det() == 0 {
 		return
 	}
@@ -228,17 +280,14 @@ func (r *renderer) drawNode(n *Node, c context) {
 func (r *renderer) withEffects(n *Node, c context, draw func(context)) {
 	st := c.st
 	if st.filter != "" {
-		if id, _, ok := urlRef(st.filter); ok {
-			if f := r.doc.ids[id]; f != nil && f.Name == "filter" {
-				inner := draw
-				draw = func(c context) { r.drawFiltered(n, f, c, inner) }
-			}
-		} else if strings.Contains(st.filter, "(") {
-			// CSS filter functions: blur() and drop-shadow() as filter primitives.
-			if f := cssFilterNode(st.filter); f != nil {
-				inner := draw
-				draw = func(c context) { r.drawFiltered(n, f, c, inner) }
-			}
+		filters, ok := r.resolveFilters(st.filter)
+		if !ok {
+			// A filter that doesn't exist makes the element disappear.
+			return
+		}
+		for _, f := range filters {
+			inner, f := draw, f
+			draw = func(c context) { r.drawFiltered(n, f, c, inner) }
 		}
 	}
 	var bbox *gfx.Rect
@@ -274,7 +323,7 @@ func (r *renderer) withEffects(n *Node, c context, draw func(context)) {
 			if mk := r.doc.ids[id]; mk != nil && mk.Name == "mask" && r.enter(mk) {
 				defer r.leave(mk)
 				kind := gfx.MaskLuminance
-				mst := computeStyle(mk, defaultStyle(), c.lc)
+				mst := r.styleOf(mk, c.lc)
 				kind = mst.maskType
 				r.dev.PushMask(kind, st.opacity)
 				draw(c)
@@ -285,7 +334,15 @@ func (r *renderer) withEffects(n *Node, c context, draw func(context)) {
 			}
 		}
 	}
-	if st.opacity < 1 {
+	if st.blend != gfx.BlendNormal {
+		if bd, ok := r.dev.(gfx.BlendDevice); ok {
+			bd.PushBlendGroup(st.opacity, st.blend)
+			draw(c)
+			r.dev.PopGroup()
+			return
+		}
+	}
+	if st.opacity < 1 || st.isolate {
 		if st.opacity <= 0 {
 			return
 		}
@@ -295,6 +352,24 @@ func (r *renderer) withEffects(n *Node, c context, draw func(context)) {
 		return
 	}
 	draw(c)
+}
+
+// styleOf is n's style inherited along its own ancestors: referenced elements
+// (gradients, clip paths, masks, markers, patterns) inherit from where they
+// are, not from what references them.
+func (r *renderer) styleOf(n *Node, lc lengthContext) *style {
+	if n == nil {
+		return defaultStyle()
+	}
+	if r.styles == nil {
+		r.styles = map[*Node]*style{}
+	}
+	if s, ok := r.styles[n]; ok {
+		return s
+	}
+	s := computeStyle(n, r.styleOf(n.Parent, lc), lc)
+	r.styles[n] = s
+	return s
 }
 
 func (r *renderer) enter(n *Node) bool {
@@ -313,7 +388,7 @@ func (r *renderer) drawContent(n *Node, c context) {
 		r.drawChildren(n, c)
 	case "switch":
 		for _, ch := range n.Elements() {
-			if nonRendered[ch.Name] {
+			if !switchable[ch.Name] {
 				continue
 			}
 			if conditionsHold(ch) {
@@ -334,6 +409,11 @@ func (r *renderer) drawContent(n *Node, c context) {
 	case "image":
 		r.drawImage(n, c)
 	}
+}
+
+var switchable = map[string]bool{
+	"g": true, "svg": true, "use": true, "rect": true, "circle": true, "ellipse": true, "line": true, "polyline": true,
+	"polygon": true, "path": true, "text": true, "image": true, "switch": true, "a": true, "foreignObject": true,
 }
 
 // conditionsHold evaluates the conditional processing attributes of <switch>.
@@ -396,11 +476,10 @@ func (r *renderer) drawNestedSVG(n *Node, c context, sizeFrom *Node) {
 }
 
 func (lc lengthContext) resolveAttr(n *Node, attr string, axis int, def float64) float64 {
-	v, ok := n.Attrs[attr]
+	// Geometry properties may come from CSS (SVG 2), which wins over the attribute.
+	v, ok := n.styles[attr]
 	if !ok {
-		if s, ok2 := spec(n, attr); ok2 {
-			v, ok = s, true
-		}
+		v, ok = n.Attrs[attr]
 	}
 	if !ok {
 		return def
@@ -431,6 +510,18 @@ func (r *renderer) drawUse(n *Node, c context) {
 	if r.active[n] > 30 {
 		return
 	}
+	// The use element is the context element of context-fill / context-stroke.
+	none := gfx.EmptyRect()
+	if p, _, ok := r.resolvePaint(c.st.fill, c.st.fillOpacity, c, none); ok {
+		c.ctxFill = &p
+	} else {
+		c.ctxFill = nil
+	}
+	if p, _, ok := r.resolvePaint(c.st.stroke, c.st.strokeOpacity, c, none); ok {
+		c.ctxStroke = &p
+	} else {
+		c.ctxStroke = nil
+	}
 	switch target.Name {
 	case "symbol":
 		st := computeStyle(target, c.st, c.lc)
@@ -438,8 +529,8 @@ func (r *renderer) drawUse(n *Node, c context) {
 			return
 		}
 		cc := c
-		cc.st = st
-		r.drawNestedSVG(target, cc, n)
+		cc.st, cc.pst, cc.plc = st, c.st, c.lc
+		r.withEffects(target, cc, func(c context) { r.drawNestedSVG(target, c, n) })
 		return
 	case "svg":
 		st := computeStyle(target, c.st, c.lc)
@@ -611,7 +702,7 @@ func (r *renderer) resolvePaint(ps paintSpec, opacity float64, c context, bbox g
 	case "pattern":
 		return gfx.Paint{}, target, true
 	case "solidcolor":
-		sst := computeStyle(target, defaultStyle(), c.lc)
+		sst := r.styleOf(target, c.lc)
 		col := sst.color
 		if v, ok := spec(target, "solid-color"); ok {
 			if cc, ok := parseColor(v); ok {
@@ -747,17 +838,24 @@ func (r *renderer) gradient(n *Node, c context, bbox gfx.Rect, opacity float64) 
 		if g.Name != "linearGradient" && g.Name != "radialGradient" {
 			continue
 		}
-		gst := computeStyle(g, defaultStyle(), c.lc)
+		gst := r.styleOf(g, c.lc)
 		last := 0.0
 		for _, s := range g.Elements() {
 			if s.Name != "stop" {
 				continue
 			}
 			sst := computeStyle(s, gst, c.lc)
-			off := clamp01(parseFloat(s.Attr("offset"), 0))
-			if v, ok := spec(s, "offset"); ok && !s.Has("offset") {
-				off = clamp01(parseFloat(v, 0))
+			off := 0.0
+			if v, ok := spec(s, "offset"); ok {
+				// Only numbers and percentages; anything else is 0.
+				if l, ok := parseLength(v); ok && (l.Unit == "" || l.Unit == "%") {
+					off = l.V
+					if l.Unit == "%" {
+						off /= 100
+					}
+				}
 			}
+			off = clamp01(off)
 			if off < last {
 				off = last
 			}
@@ -790,7 +888,16 @@ func (r *renderer) gradient(n *Node, c context, bbox gfx.Rect, opacity float64) 
 		lc = lengthContext{vw: 1, vh: 1, fontSize: c.lc.fontSize}
 	}
 	get := func(name string, axis int, def string) float64 {
-		v, ok := chainAttr(chain, name)
+		// Geometry is only taken from gradients of the same kind.
+		v, ok := "", false
+		for _, cn := range chain {
+			if cn.Name != n.Name {
+				continue
+			}
+			if v, ok = cn.Attrs[name]; ok {
+				break
+			}
+		}
 		if !ok {
 			v = def
 		}
@@ -807,15 +914,18 @@ func (r *renderer) gradient(n *Node, c context, bbox gfx.Rect, opacity float64) 
 		g.CX = get("cx", axisX, "50%")
 		g.CY = get("cy", axisY, "50%")
 		g.R = get("r", axisOther, "50%")
-		if _, ok := chainAttr(chain, "fx"); ok {
-			g.FX = get("fx", axisX, "50%")
-		} else {
-			g.FX = g.CX
+		g.FX, g.FY = g.CX, g.CY
+		for _, cn := range chain {
+			if cn.Name == n.Name && cn.Has("fx") {
+				g.FX = get("fx", axisX, "50%")
+				break
+			}
 		}
-		if _, ok := chainAttr(chain, "fy"); ok {
-			g.FY = get("fy", axisY, "50%")
-		} else {
-			g.FY = g.CY
+		for _, cn := range chain {
+			if cn.Name == n.Name && cn.Has("fy") {
+				g.FY = get("fy", axisY, "50%")
+				break
+			}
 		}
 		g.FR = get("fr", axisOther, "0")
 		if g.R <= 0 {
@@ -837,7 +947,12 @@ func (r *renderer) gradient(n *Node, c context, bbox gfx.Rect, opacity float64) 
 		g.Matrix = gfx.Translate(bbox.X0, bbox.Y0).Mul(gfx.Scale(bbox.Width(), bbox.Height()))
 	}
 	if t, ok := chainAttr(chain, "gradientTransform"); ok {
-		g.Matrix = g.Matrix.Mul(parseTransform(t))
+		gt := parseTransform(t)
+		if o, ok := spec(n, "transform-origin"); ok {
+			ox, oy := transformOrigin(o, lc)
+			gt = gfx.Translate(ox, oy).Mul(gt).Mul(gfx.Translate(-ox, -oy))
+		}
+		g.Matrix = g.Matrix.Mul(gt)
 	}
 	return g, gfx.Color{}, true
 }
@@ -898,6 +1013,10 @@ func (r *renderer) patternFill(p *gfx.Path, c context, rule gfx.FillRule, pat *N
 	pt := gfx.Identity
 	if t, ok := chainAttr(chain, "patternTransform"); ok {
 		pt = parseTransform(t)
+		if o, ok := spec(pat, "transform-origin"); ok {
+			ox, oy := transformOrigin(o, c.lc)
+			pt = gfx.Translate(ox, oy).Mul(pt).Mul(gfx.Translate(-ox, -oy))
+		}
 	}
 	inv, ok := pt.Invert()
 	if !ok {
@@ -928,7 +1047,7 @@ func (r *renderer) patternFill(p *gfx.Path, c context, rule gfx.FillRule, pat *N
 		r.dev.PushGroup(opacity)
 		defer r.dev.PopGroup()
 	}
-	pst := computeStyle(content, defaultStyle(), c.lc)
+	pst := r.styleOf(content, c.lc)
 	base := c.m.Mul(pt)
 	for j := j0; j < j1; j++ {
 		for i := i0; i < i1; i++ {
@@ -959,7 +1078,7 @@ func (r *renderer) pushClipPath(cp *Node, c context, bounds func() gfx.Rect) int
 	}
 	defer r.leave(cp)
 	pushed := 0
-	cst := computeStyle(cp, defaultStyle(), c.lc)
+	cst := r.styleOf(cp, c.lc)
 	// A clip path can itself be clipped.
 	if cst.clipPath != "" {
 		if id, _, ok := urlRef(cst.clipPath); ok {
@@ -968,7 +1087,7 @@ func (r *renderer) pushClipPath(cp *Node, c context, bounds func() gfx.Rect) int
 			}
 		}
 	}
-	m := c.m.Mul(r.transformOf(cp, cst))
+	m := c.m.Mul(r.transformOf(cp, cst, c.lc))
 	lc := c.lc
 	if cp.Attr("clipPathUnits") == "objectBoundingBox" {
 		b := bounds()
@@ -988,7 +1107,7 @@ func (r *renderer) pushClipPath(cp *Node, c context, bounds func() gfx.Rect) int
 		if !s.display {
 			return
 		}
-		t = t.Mul(r.transformOf(n, s))
+		t = t.Mul(r.transformOf(n, s, c.lc))
 		var geom *gfx.Path
 		switch n.Name {
 		case "use":
@@ -1051,11 +1170,25 @@ func (r *renderer) drawMaskContent(mk *Node, c context, bounds func() gfx.Rect) 
 	region.Rect(x, y, w, h)
 	r.dev.PushClip(region, c.m, gfx.NonZero)
 	defer r.dev.PopClip()
-	mst := computeStyle(mk, defaultStyle(), c.lc)
+	mst := r.styleOf(mk, c.lc)
 	cc := context{m: c.m, st: mst, lc: c.lc}
 	if mk.Attr("maskContentUnits") == "objectBoundingBox" {
 		b := bounds()
 		cc.m = c.m.Mul(gfx.Translate(b.X0, b.Y0)).Mul(gfx.Scale(b.Width(), b.Height()))
+	}
+	// A mask can itself be masked.
+	if mst.mask != "" {
+		if id, _, ok := urlRef(mst.mask); ok {
+			if inner := r.doc.ids[id]; inner != nil && inner.Name == "mask" && r.enter(inner) {
+				defer r.leave(inner)
+				r.dev.PushMask(r.styleOf(inner, c.lc).maskType, 1)
+				r.drawChildren(mk, cc)
+				r.dev.BeginMaskContent()
+				r.drawMaskContent(inner, c, bounds)
+				r.dev.PopMask()
+				return
+			}
+		}
 	}
 	r.drawChildren(mk, cc)
 }
@@ -1074,7 +1207,7 @@ func (r *renderer) bbox(n *Node, c context, withTransform bool) gfx.Rect {
 	}
 	m := c.m
 	if withTransform {
-		m = m.Mul(r.transformOf(n, st))
+		m = m.Mul(r.transformOf(n, st, c.lc))
 	}
 	lc := c.lc
 	lc.fontSize = st.fontSize

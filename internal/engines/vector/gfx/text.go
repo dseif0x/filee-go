@@ -353,3 +353,14 @@ func (f *Fonts) Covers(q FontQuery, r rune) bool {
 	_, ok := face.NominalGlyph(r)
 	return ok
 }
+
+// AddFontFile adds a TrueType / OpenType font (or collection) file.
+func (f *Fonts) AddFontFile(path string) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.fm.AddFont(bytes.NewReader(data), path, "")
+}

@@ -118,6 +118,7 @@ func matchBrace(s string, open int) int {
 
 // parseDeclarations reads "a: b; c: d !important".
 func parseDeclarations(s string) []declaration {
+	s = cssComment.ReplaceAllString(s, "")
 	var out []declaration
 	for _, part := range splitOutsideParens(s, ';') {
 		colon := strings.IndexByte(part, ':')

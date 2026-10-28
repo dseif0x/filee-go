@@ -26,6 +26,7 @@ type rasterLayer struct {
 	mask    bool // content of PushMask
 	kind    MaskKind
 	isMask  bool // the mask drawing of BeginMaskContent
+	blend   BlendMode
 }
 
 // clipMask is the coverage of all clips pushed so far (nil pix: everything).
@@ -427,13 +428,37 @@ func (r *Raster) PushGroup(opacity float64) {
 	r.layers = append(r.layers, &rasterLayer{img: image.NewRGBA(image.Rect(0, 0, r.W, r.H)), opacity: opacity})
 }
 
+// PushBlendGroup starts a group composited with a blend mode.
+func (r *Raster) PushBlendGroup(opacity float64, mode BlendMode) {
+	r.layers = append(r.layers, &rasterLayer{img: image.NewRGBA(image.Rect(0, 0, r.W, r.H)), opacity: opacity, blend: mode})
+}
+
 func (r *Raster) PopGroup() {
 	if len(r.layers) < 2 {
 		return
 	}
 	l := r.layers[len(r.layers)-1]
 	r.layers = r.layers[:len(r.layers)-1]
+	if l.blend != BlendNormal {
+		compositeBlend(r.top(), l.img, l.opacity, l.blend)
+		return
+	}
 	composite(r.top(), l.img, nil, MaskLuminance, l.opacity)
+}
+
+func compositeBlend(dst, src *image.RGBA, opacity float64, mode BlendMode) {
+	op := clamp01(opacity)
+	for i := 0; i < len(src.Pix); i += 4 {
+		if src.Pix[i+3] == 0 {
+			continue
+		}
+		s := [4]float64{float64(src.Pix[i]) / 255 * op, float64(src.Pix[i+1]) / 255 * op, float64(src.Pix[i+2]) / 255 * op, float64(src.Pix[i+3]) / 255 * op}
+		d := [4]float64{float64(dst.Pix[i]) / 255, float64(dst.Pix[i+1]) / 255, float64(dst.Pix[i+2]) / 255, float64(dst.Pix[i+3]) / 255}
+		BlendPixel(mode, &d, s)
+		for k := 0; k < 4; k++ {
+			dst.Pix[i+k] = to8(d[k])
+		}
+	}
 }
 
 func (r *Raster) PushMask(kind MaskKind, opacity float64) {

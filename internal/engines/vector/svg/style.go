@@ -54,6 +54,7 @@ type style struct {
 	writingMode                string
 	lang                       string
 	textDecorationInherited    []string
+	colorInterp                string
 
 	// not inherited
 	display          bool
@@ -72,6 +73,8 @@ type style struct {
 	lightingColor    gfx.Color
 	maskType         gfx.MaskKind
 	transformCSS     string
+	blend            gfx.BlendMode
+	isolate          bool
 }
 
 func defaultStyle() *style {
@@ -129,6 +132,7 @@ func computeStyle(n *Node, parent *style, lc lengthContext) *style {
 	s.floodColor, s.floodOpacity, s.lightingColor = d.floodColor, d.floodOpacity, d.lightingColor
 	s.maskType = gfx.MaskLuminance
 	s.transformCSS = ""
+	s.blend, s.isolate = gfx.BlendNormal, false
 	if n.Name == "svg" || n.Name == "symbol" || n.Name == "marker" || n.Name == "pattern" {
 		s.overflowVisible = false
 	}
@@ -170,10 +174,10 @@ func computeStyle(n *Node, parent *style, lc lengthContext) *style {
 		}
 	}
 	if v, ok := get("fill-opacity"); ok {
-		s.fillOpacity = clamp01(parseFloat(v, 1))
+		s.fillOpacity = parseOpacity(v, s.fillOpacity)
 	}
 	if v, ok := get("stroke-opacity"); ok {
-		s.strokeOpacity = clamp01(parseFloat(v, 1))
+		s.strokeOpacity = parseOpacity(v, s.strokeOpacity)
 	}
 	if v, ok := get("fill-rule"); ok {
 		s.fillRule = rule(v)
@@ -241,7 +245,7 @@ func computeStyle(n *Node, parent *style, lc lengthContext) *style {
 		s.display = v != "none"
 	}
 	if v, ok := get("opacity"); ok {
-		s.opacity = clamp01(parseFloat(v, 1))
+		s.opacity = parseOpacity(v, 1)
 	}
 	if v, ok := get("clip-path"); ok && v != "none" {
 		s.clipPath = v
@@ -260,7 +264,7 @@ func computeStyle(n *Node, parent *style, lc lengthContext) *style {
 		}
 	}
 	if v, ok := get("stop-opacity"); ok {
-		s.stopOpacity = clamp01(parseFloat(v, 1))
+		s.stopOpacity = parseOpacity(v, 1)
 	}
 	if v, ok := get("flood-color"); ok {
 		if strings.EqualFold(v, "currentcolor") {
@@ -270,7 +274,7 @@ func computeStyle(n *Node, parent *style, lc lengthContext) *style {
 		}
 	}
 	if v, ok := get("flood-opacity"); ok {
-		s.floodOpacity = clamp01(parseFloat(v, 1))
+		s.floodOpacity = parseOpacity(v, 1)
 	}
 	if v, ok := get("lighting-color"); ok {
 		if c, ok := parseColor(v); ok {
@@ -282,6 +286,12 @@ func computeStyle(n *Node, parent *style, lc lengthContext) *style {
 	}
 	if v, ok := get("overflow"); ok {
 		s.overflowVisible = v == "visible" || v == "auto"
+	}
+	if v, ok := get("mix-blend-mode"); ok {
+		s.blend = gfx.ParseBlendMode(v)
+	}
+	if v, ok := get("isolation"); ok {
+		s.isolate = v == "isolate"
 	}
 	if v, ok := get("mask-type"); ok && v == "alpha" {
 		s.maskType = gfx.MaskAlpha
@@ -338,6 +348,9 @@ func computeStyle(n *Node, parent *style, lc lengthContext) *style {
 	}
 	if v, ok := get("white-space"); ok {
 		s.preserveSpace = v == "pre" || v == "pre-wrap" || v == "break-spaces"
+	}
+	if v, ok := get("color-interpolation-filters"); ok && v != "auto" {
+		s.colorInterp = v
 	}
 	if v, ok := get("direction"); ok {
 		s.direction = v
@@ -532,4 +545,19 @@ func parseFontShorthand(v string, s *style, parentSize float64, lc lengthContext
 			}
 		}
 	}
+}
+
+// parseOpacity reads a number or a percentage; anything else keeps def.
+func parseOpacity(v string, def float64) float64 {
+	l, ok := parseLength(v)
+	if !ok {
+		return def
+	}
+	switch l.Unit {
+	case "":
+		return clamp01(l.V)
+	case "%":
+		return clamp01(l.V / 100)
+	}
+	return def
 }

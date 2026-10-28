@@ -174,7 +174,7 @@ func (r *renderer) layoutText(n *Node, c context) []textPiece {
 		pathOffset := 0.0
 		if chunkPath != nil {
 			if p := shapePath(chunkPath, chunk[0].lc); p != nil {
-				m := r.transformOf(chunkPath, defaultStyle())
+				m := r.transformOf(chunkPath, defaultStyle(), chunk[0].lc)
 				measure = newPathMeasure(p.Transformed(m))
 				if l, ok := parseLength(chunkOffset); ok {
 					if l.Unit == "%" {
@@ -197,7 +197,7 @@ func (r *renderer) layoutText(n *Node, c context) []textPiece {
 				if !ok {
 					continue
 				}
-				t = gfx.Translate(pt.X, pt.Y).Mul(gfx.Rotate(ang)).Mul(gfx.Translate(-g.g.Advance/2, g.g.Y))
+				t = gfx.Translate(pt.X, pt.Y).Mul(gfx.Rotate(ang + g.rot*math.Pi/180)).Mul(gfx.Translate(-g.g.Advance/2, g.g.Y))
 			} else {
 				t = gfx.Translate(g.g.X+shift, g.g.Y)
 				if g.rot != 0 {
@@ -245,10 +245,9 @@ func (r *renderer) layoutText(n *Node, c context) []textPiece {
 		penY += ch.dy
 		// A span: characters in one style with no positioning of their own.
 		j := i + 1
-		single := ch.rot != nil && *ch.rot != 0
-		for !single && j < len(chars) {
+		for j < len(chars) {
 			nx := chars[j]
-			if nx.st != ch.st || nx.x != nil || nx.y != nil || nx.hasDX || nx.hasDY || nx.rot != nil && *nx.rot != 0 || nx.path != ch.path || nx.pathStart {
+			if nx.st != ch.st || nx.x != nil || nx.y != nil || nx.hasDX || nx.hasDY || nx.path != ch.path || nx.pathStart {
 				break
 			}
 			j++
@@ -262,10 +261,6 @@ func (r *renderer) layoutText(n *Node, c context) []textPiece {
 		shaped := r.fonts.Shape(string(text), q, st.fontSize, st.lang)
 		shiftY := baselineShift(st, ch.lc, r.fonts, q)
 		spanStart := penX
-		rot := 0.0
-		if ch.rot != nil {
-			rot = *ch.rot
-		}
 		lastCluster := -1
 		shapedPen := 0.0
 		for _, g := range shaped.Glyphs {
@@ -281,6 +276,10 @@ func (r *renderer) layoutText(n *Node, c context) []textPiece {
 			shapedPen += g.Advance
 			g.X = penX + offset
 			g.Y += penY + shiftY
+			rot := 0.0
+			if k := i + g.Cluster; k < j && chars[k].rot != nil {
+				rot = *chars[k].rot
+			}
 			chunk = append(chunk, glyphOut{g: g, rot: rot, st: st, lc: ch.lc, path: ch.path})
 			penX += g.Advance
 		}

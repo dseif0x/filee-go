@@ -77,7 +77,7 @@ func hangulStylePackage(t *testing.T, folder string) string {
 		`</hh:tabPr></hh:tabProperties><hh:numberings itemCnt="2">` +
 		`<hh:numbering id="1" start="0">` + paraHead(1, "DIGIT", "^1.", 1) + paraHead(2, "HANGUL_SYLLABLE", "^2.", 1) + "</hh:numbering>" +
 		`<hh:numbering id="2" start="1">` + paraHead(1, "DIGIT", "^1)", 1) + paraHead(2, "ROMAN_SMALL", "(^2)", 3) + "</hh:numbering>" +
-		"</hh:numberings><hh:bullets itemCnt=\"1\"><hh:bullet id=\"1\" char=\"\" useImage=\"0\">" +
+		"</hh:numberings><hh:bullets itemCnt=\"1\"><hh:bullet id=\"1\" char=\"\uf0a7\" useImage=\"0\">" +
 		`<hh:paraHead level="0" align="LEFT" useInstWidth="0" autoIndent="1" widthAdjust="0" textOffsetType="PERCENT" textOffset="50" numFormat="DIGIT" charPrIDRef="4294967295" checkable="0"/></hh:bullet></hh:bullets>` +
 		`<hh:paraProperties itemCnt="6">` +
 		paraPr("0", "0", "JUSTIFY", heading("NONE", 0, 0), noBreaks, sw(margins(0, 0, 0, 0, 0)+percent160, margins(0, 0, 0, 0, 0)+percent160)) +

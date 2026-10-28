@@ -242,13 +242,13 @@ func (h *hwpFile) paragraph(p *record, output []doc.Block, state *sectionState) 
 		case 13:
 			i++
 		case 24:
-			b.addText("­", f)
+			b.addText("\u00ad", f)
 			i++
 		case 30:
-			b.addText(" ", f)
+			b.addText("\u00a0", f)
 			i++
 		case 31:
-			b.addText(" ", f)
+			b.addText("\u2007", f)
 			i++
 		case 0, 25, 26, 27, 28, 29:
 			i++
@@ -436,8 +436,6 @@ func atoiSafe(s string) int {
 	return n
 }
 
-var numberingCache = map[*hwpFile]map[int]*doc.Numbering{}
-
 // numbering is the list definition of a 1-based numbering id (shared by all its paragraphs).
 func (h *hwpFile) numbering(id int) *doc.Numbering {
 	if id < 1 || id > len(h.info.numberings) {
@@ -463,15 +461,13 @@ func (h *hwpFile) bullet(id int) *doc.Numbering {
 }
 
 func (h *hwpFile) cachedList(key int, make func() *doc.Numbering) *doc.Numbering {
-	m := numberingCache[h]
-	if m == nil {
-		m = map[int]*doc.Numbering{}
-		numberingCache[h] = m
+	if h.lists == nil {
+		h.lists = map[int]*doc.Numbering{}
 	}
-	if n, ok := m[key]; ok {
+	if n, ok := h.lists[key]; ok {
 		return n
 	}
 	n := make()
-	m[key] = n
+	h.lists[key] = n
 	return n
 }

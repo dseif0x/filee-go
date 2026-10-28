@@ -13,6 +13,9 @@ import (
 	"github.com/dseif0x/filee-go/internal/engines/fonts"
 	"github.com/dseif0x/filee-go/internal/engines/geo"
 	"github.com/dseif0x/filee-go/internal/engines/ghostscript"
+	"github.com/dseif0x/filee-go/internal/engines/hwp/hwpx"
+	"github.com/dseif0x/filee-go/internal/engines/hwp/rhwp"
+	"github.com/dseif0x/filee-go/internal/engines/hwp/unhwp"
 	"github.com/dseif0x/filee-go/internal/engines/icns"
 	"github.com/dseif0x/filee-go/internal/engines/images"
 	"github.com/dseif0x/filee-go/internal/engines/libreoffice"
@@ -53,10 +56,14 @@ func Converters() []convert.Converter {
 		pdf.PdfSlides{},
 		pdf.PdfTables{},
 		email.New(),
+		// HWP (C# order: right after the PDF engines, the HWPX writer after OOXML)
+		rhwp.New(),
+		unhwp.New(),
 		// office
 		markdown.New(),
 		spreadsheet.New(),
 		office.New(),
+		hwpx.New(),
 		archive.New(),
 		docxwriter.New(),
 		// e-books before Pandoc (C# order); calibre ranks last

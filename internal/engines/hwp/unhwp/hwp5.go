@@ -515,6 +515,7 @@ type hwpFile struct {
 	mediaFolder string
 	media       map[int]string
 	title       string
+	lists       map[int]*doc.Numbering // numberings (id) and bullets (-id), shared by their paragraphs
 }
 
 // ReadHWP reads an HWP 5.0 file into the document model; pictures are extracted into mediaFolder.

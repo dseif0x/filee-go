@@ -18,11 +18,18 @@ import (
 
 	"github.com/dseif0x/filee-go/internal/convert"
 	"github.com/dseif0x/filee-go/internal/doc"
+	"github.com/dseif0x/filee-go/internal/engines/ebook"
+	_ "github.com/dseif0x/filee-go/internal/engines/htmldoc" // the HTML document reader
 	"github.com/dseif0x/filee-go/internal/engines/pandoc"
 	"github.com/dseif0x/filee-go/internal/tools"
 )
 
 const pandocTimeout = 2 * time.Minute
+
+// E-books → HWPX go through the e-book engine's readers and this writer.
+func init() {
+	ebook.HwpxWriter = func(d *doc.Document, output string) error { return Write(d, output, nil) }
+}
 
 // throughPandoc are the formats read through Pandoc's JSON AST when Pandoc is installed: format id → Pandoc reader.
 // A built-in reader for the same format wins.

@@ -675,25 +675,25 @@ func bulletText(text, font string) string {
 	switch text {
 	case "":
 		return "●"
-	case "", "":
+	case "\uf0b7", "\uf09f":
 		return "•"
-	case "o", "":
+	case "o", "\uf06f":
 		return "○"
-	case "":
+	case "\uf0a7":
 		return "▪"
-	case "":
+	case "\uf06e":
 		return "■"
-	case "":
+	case "\uf0d8":
 		return "➢"
-	case "":
+	case "\uf076":
 		return "❖"
-	case "":
+	case "\uf0fc":
 		return "✓"
-	case "":
+	case "\uf071":
 		return "❑"
-	case "", "":
+	case "\uf075", "\uf0a8":
 		return "◆"
-	case "":
+	case "\uf02d":
 		return "-"
 	}
 	for _, c := range text {

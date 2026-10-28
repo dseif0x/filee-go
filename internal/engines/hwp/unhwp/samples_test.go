@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dseif0x/filee-go/internal/engines/hwp/hwpx"
+	"github.com/dseif0x/filee-go/internal/engines/htmldoc"
 )
 
 // TestSamples reads every .hwp in FILEE_HWP_SAMPLES (real documents, not shipped with the repository).
@@ -22,7 +22,7 @@ func TestSamples(t *testing.T) {
 			t.Logf("%s: %v", filepath.Base(f), err)
 			continue
 		}
-		text := hwpx.PlainTextWrite(d)
+		text := htmldoc.PlainText(d, "\n")
 		if len(text) > 300 {
 			text = text[:300]
 		}

@@ -64,6 +64,7 @@ type Fonts struct {
 	outlines map[glyphKey]*Path
 	fallback *font.Face
 	system   bool
+	seq      int
 }
 
 type glyphKey struct {
@@ -377,4 +378,13 @@ func (f *Fonts) AddFontFile(path string) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return f.fm.AddFont(bytes.NewReader(data), path, "")
+}
+
+// AddFontData adds a TrueType / OpenType font from memory under family
+// (the font's own family name when empty).
+func (f *Fonts) AddFontData(data []byte, family string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.seq++
+	return f.fm.AddFont(bytes.NewReader(data), fmt.Sprintf("memory:%d", f.seq), family)
 }

@@ -55,6 +55,7 @@ func parse(data []byte, baseDir string, depth int) (*Document, error) {
 	}
 	index(root)
 	cascade(root)
+	d.loadFontFaces()
 	d.size()
 	return d, nil
 }

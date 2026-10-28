@@ -70,7 +70,7 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer, newApp fu
 	case "engines":
 		return enginesCmd(a, stdout)
 	case "app":
-		if err := gui.Run(a); err != nil {
+		if err := gui.RunWith(a, gui.Options{Background: o.background, SelfTest: o.selftest, Files: o.inputs}); err != nil {
 			fmt.Fprintf(stderr, "filee: %v\n", err)
 			return exitUsage
 		}

@@ -20,7 +20,10 @@ func helpText(command string) string {
 	case "engines":
 		return "Usage: filee engines\n\nLists the conversion engines in priority order and whether each can run here.\n"
 	case "app":
-		return "Usage: filee app\n\nStarts the Filee desktop app.\n"
+		return "Usage: filee app [--background] [--selftest] [files...]\n\nStarts the Filee desktop app (macOS).\n\n" +
+			"  --background  Start without a window (sign-in)\n" +
+			"  --selftest    Check the native macOS parts without user interaction, print the results and exit\n" +
+			"  files         Open the donut for these files\n"
 	}
 	return helpGeneral
 }

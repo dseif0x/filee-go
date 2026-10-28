@@ -29,6 +29,7 @@ import (
 	"github.com/dseif0x/filee-go/internal/engines/pdf"
 	"github.com/dseif0x/filee-go/internal/engines/spreadsheet"
 	"github.com/dseif0x/filee-go/internal/engines/subtitles"
+	"github.com/dseif0x/filee-go/internal/engines/vector"
 	"github.com/dseif0x/filee-go/internal/engines/wic"
 )
 
@@ -71,6 +72,7 @@ func Converters() []convert.Converter {
 		pandoc.New(),
 		libreoffice.New(),
 		images.New(),
+		vector.New(),
 		icns.New(),
 		wic.New(),
 		calibre.New(),

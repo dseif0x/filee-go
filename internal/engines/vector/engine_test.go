@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"math"
 	"image"
 	"image/color"
 	"image/png"
@@ -13,6 +14,8 @@ import (
 	"testing"
 
 	"github.com/dseif0x/filee-go/internal/convert"
+	"github.com/dseif0x/filee-go/internal/engines/cad/cadoc"
+	"github.com/dseif0x/filee-go/internal/engines/cad/cadoc/dxf"
 	"github.com/dseif0x/filee-go/internal/engines/vector/gfx"
 	"github.com/dseif0x/filee-go/internal/engines/vector/svg"
 	"github.com/dseif0x/filee-go/internal/presets"
@@ -261,5 +264,39 @@ func TestWmfToPngAndPdf(t *testing.T) {
 	data, _ := os.ReadFile(pdfOut[0])
 	if !bytes.HasPrefix(data, []byte("%PDF")) {
 		t.Fatal("no pdf")
+	}
+}
+
+func TestSvgToDxf(t *testing.T) {
+	in := write(t, "a.svg", []byte(`<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96">
+<circle cx="48" cy="48" r="24" fill="none" stroke="#00ff00"/>
+<ellipse cx="20" cy="20" rx="10" ry="5" fill="red"/>
+<path d="M10 80 C 20 60, 40 60, 50 80" fill="none" stroke="blue"/>
+<line x1="0" y1="0" x2="96" y2="0" stroke="black"/>
+<rect x="60" y="60" width="20" height="10" fill="black"/></svg>`))
+	s, _ := step(t, in, "svg", "dxf")
+	out := run(t, s)
+	doc, err := dxf.ReadFile(out[0], dxf.ReadConfig{}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if doc.Header.InsUnits != cadoc.UnitsTypeMillimeters {
+		t.Fatalf("units %v", doc.Header.InsUnits)
+	}
+	kinds := map[string]int{}
+	for _, e := range doc.ModelSpace().Entities {
+		kinds[e.ObjectName()]++
+		if c, ok := e.(*cadoc.Circle); ok {
+			// 24 px = 6.35 mm, centre at (12.7, 12.7) mm with y up.
+			if math.Abs(c.Radius-6.35) > 1e-6 || math.Abs(c.Center.X-12.7) > 1e-6 || math.Abs(c.Center.Y-12.7) > 1e-6 {
+				t.Fatalf("circle %+v", c)
+			}
+			if r, g, b := c.Color.RGB(); r != 0 || g != 255 || b != 0 {
+				t.Fatalf("circle colour %v", c.Color)
+			}
+		}
+	}
+	if kinds["CIRCLE"] != 1 || kinds["ELLIPSE"] != 1 || kinds["LWPOLYLINE"] != 2 || kinds["LINE"] != 1 {
+		t.Fatalf("entities %v", kinds)
 	}
 }

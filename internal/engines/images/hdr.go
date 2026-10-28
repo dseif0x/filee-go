@@ -2,10 +2,12 @@ package images
 
 import (
 	"bytes"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"image"
 	"math"
+	"math/bits"
 	"strconv"
 	"strings"
 
@@ -181,11 +183,72 @@ func decodeHDR(data []byte) (*Picture, error) {
 }
 
 func decodeDDS(data []byte) (*Picture, error) {
+	if p, ok := decodeDDSMasked(data); ok {
+		return p, nil
+	}
 	_, img, err := bcn.DecodeDDS(bytes.NewReader(data))
 	if err != nil {
 		return nil, fmt.Errorf("DDS: %w", err)
 	}
 	return one(&Frame{Img: ToNRGBA(img), Alpha: !opaque(img)}), nil
+}
+
+// decodeDDSMasked reads the uncompressed legacy layouts described by channel
+// masks (RGB, luminance, alpha only), the main surface only; ok is false for
+// compressed or DX10 files, which go to bcn.
+func decodeDDSMasked(data []byte) (*Picture, bool) {
+	le := binary.LittleEndian
+	if len(data) < 128 || string(data[:4]) != "DDS " || le.Uint32(data[4:]) != 124 {
+		return nil, false
+	}
+	h, w := int(le.Uint32(data[12:])), int(le.Uint32(data[16:]))
+	flags, bits := le.Uint32(data[80:]), int(le.Uint32(data[88:]))
+	masks := [4]uint32{le.Uint32(data[92:]), le.Uint32(data[96:]), le.Uint32(data[100:]), le.Uint32(data[104:])}
+	const alphaPixels, alphaOnly, fourCC, rgb, luminance = 0x1, 0x2, 0x4, 0x40, 0x20000
+	if flags&fourCC != 0 || flags&(rgb|luminance|alphaOnly) == 0 || w <= 0 || h <= 0 || int64(w)*int64(h) > 1<<30 {
+		return nil, false
+	}
+	if bits != 8 && bits != 16 && bits != 24 && bits != 32 {
+		return nil, false
+	}
+	bpp := bits / 8
+	if 128+w*h*bpp > len(data) {
+		return nil, false
+	}
+	if flags&alphaPixels == 0 && flags&alphaOnly == 0 {
+		masks[3] = 0 // the fourth byte is padding
+	}
+	channel := func(v, mask uint32, def uint8) uint8 {
+		if mask == 0 {
+			return def
+		}
+		shift := bits32TrailingZeros(mask)
+		width := bits32Ones(mask)
+		c := (v & mask) >> shift
+		if width >= 8 {
+			return uint8(c >> (width - 8))
+		}
+		return uint8(c * 255 / (1<<width - 1))
+	}
+	img := image.NewNRGBA(image.Rect(0, 0, w, h))
+	px := data[128:]
+	for i := 0; i < w*h; i++ {
+		var v uint32
+		for k := 0; k < bpp; k++ {
+			v |= uint32(px[i*bpp+k]) << (8 * k)
+		}
+		o := i * 4
+		switch {
+		case flags&luminance != 0:
+			l := channel(v, masks[0], 0)
+			img.Pix[o], img.Pix[o+1], img.Pix[o+2] = l, l, l
+		case flags&alphaOnly != 0 && flags&rgb == 0:
+		default:
+			img.Pix[o], img.Pix[o+1], img.Pix[o+2] = channel(v, masks[0], 0), channel(v, masks[1], 0), channel(v, masks[2], 0)
+		}
+		img.Pix[o+3] = channel(v, masks[3], 255)
+	}
+	return one(&Frame{Img: img, Alpha: masks[3] != 0, Gray: flags&luminance != 0}), true
 }
 
 // encodeDDS writes DXT5 (BC3) when the picture has transparency, else DXT1
@@ -205,3 +268,6 @@ func encodeDDS(f *Frame) ([]byte, error) {
 	}
 	return buf.Bytes(), nil
 }
+
+func bits32TrailingZeros(v uint32) int { return bits.TrailingZeros32(v) }
+func bits32Ones(v uint32) int          { return bits.OnesCount32(v) }

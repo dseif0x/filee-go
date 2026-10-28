@@ -262,8 +262,8 @@ func buildXls(t *testing.T) []byte {
 		for i := 0; i < 16; i++ {
 			b = append(b, xf(0, 0)...)
 		}
-		b = append(b, xf(164, 3)...)   // 16: 0.0, right aligned
-		b = append(b, xf(14, 0)...)    // 17: date
+		b = append(b, xf(164, 3)...) // 16: 0.0, right aligned
+		b = append(b, xf(14, 0)...)  // 17: date
 		b = append(b, rec(0x0085, u32(offset), []byte{0, 0}, sheetName)...)
 		b = append(b, rec(0x00FC, u32(2), u32(2), xlstr("Hallo", 2), xlstr("Welt ö", 2))...)
 		b = append(b, rec(0x000A)...)

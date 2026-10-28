@@ -239,6 +239,7 @@ func Run(ctx context.Context, c Cmd) (*Result, error) {
 	// A killed program may leave a child holding the pipes; don't wait for it forever.
 	cmd.WaitDelay = 10 * time.Second
 	hideWindow(cmd)
+	killTree(cmd)
 	if c.LowPriority {
 		lowerAtStart(cmd)
 	}

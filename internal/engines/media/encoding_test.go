@@ -96,7 +96,11 @@ func TestChannelsSampleRateAndBitDepth(t *testing.T) {
 	if slices.Contains(args(t, "opus", nil, nil), "-ac") {
 		t.Error("-ac without a channel option")
 	}
-	wav := args(t, "wav", opts(func(o *presets.MediaOptions) { o.AudioChannels = 1; o.AudioSampleRate = 16000; o.WavFormat = presets.Pcm24 }), nil)
+	wav := args(t, "wav", opts(func(o *presets.MediaOptions) {
+		o.AudioChannels = 1
+		o.AudioSampleRate = 16000
+		o.WavFormat = presets.Pcm24
+	}), nil)
 	eq(t, "pcm_s24le", after(wav, "-c:a"))
 	eq(t, "1", after(wav, "-ac"))
 	eq(t, "16000", after(wav, "-ar"))

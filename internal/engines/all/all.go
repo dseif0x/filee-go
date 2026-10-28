@@ -4,6 +4,7 @@ package all
 
 import (
 	"github.com/dseif0x/filee-go/internal/convert"
+	"github.com/dseif0x/filee-go/internal/engines/ghostscript"
 	"github.com/dseif0x/filee-go/internal/engines/media"
 	"github.com/dseif0x/filee-go/internal/engines/ocr"
 )
@@ -17,6 +18,8 @@ func Converters() []convert.Converter {
 		// OCR: Apple Vision first, so a Mac needs no download for the languages it reads.
 		ocr.NewVision(),
 		ocr.NewTesseract(),
+		// PostScript
+		ghostscript.New(),
 	}
 }
 

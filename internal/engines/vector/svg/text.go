@@ -151,6 +151,9 @@ func (r *renderer) layoutText(n *Node, c context) []textPiece {
 		st   *style
 		lc   lengthContext
 		path *Node
+		// vertical text: the pen's y at the glyph and its advance down
+		vert       bool
+		penY, advY float64
 	}
 	var pieces []textPiece
 	var chunk []glyphOut
@@ -165,7 +168,13 @@ func (r *renderer) layoutText(n *Node, c context) []textPiece {
 		// text-anchor of the chunk's first character.
 		anchor := chunk[0].st.textAnchor
 		minX, maxX := math.Inf(1), math.Inf(-1)
+		vertical := chunk[0].vert
 		for _, g := range chunk {
+			if vertical {
+				minX = math.Min(minX, g.penY)
+				maxX = math.Max(maxX, g.penY+g.advY)
+				continue
+			}
 			minX = math.Min(minX, g.g.X)
 			maxX = math.Max(maxX, g.g.X+g.g.Advance)
 		}
@@ -177,7 +186,11 @@ func (r *renderer) layoutText(n *Node, c context) []textPiece {
 		case anchor == "end" && !rtl, anchor == "start" && rtl:
 			shift = -(maxX - minX)
 		}
-		shift += chunk[0].g.X - minX
+		if vertical {
+			shift += chunk[0].penY - minX
+		} else {
+			shift += chunk[0].g.X - minX
+		}
 		var measure *pathMeasure
 		pathOffset := 0.0
 		if chunkPath != nil {
@@ -206,6 +219,11 @@ func (r *renderer) layoutText(n *Node, c context) []textPiece {
 					continue
 				}
 				t = gfx.Translate(pt.X, pt.Y).Mul(gfx.Rotate(ang + g.rot*math.Pi/180)).Mul(gfx.Translate(-g.g.Advance/2, g.g.Y))
+			} else if vertical {
+				t = gfx.Translate(g.g.X, g.g.Y+shift)
+				if g.rot != 0 {
+					t = t.Mul(gfx.Rotate(g.rot * math.Pi / 180))
+				}
 			} else {
 				t = gfx.Translate(g.g.X+shift, g.g.Y)
 				if g.rot != 0 {
@@ -268,6 +286,44 @@ func (r *renderer) layoutText(n *Node, c context) []textPiece {
 		}
 		st := ch.st
 		q := gfx.FontQuery{Families: st.fontFamily, Weight: st.fontWeight, Italic: st.italic}
+		if isVertical(st.writingMode) && ch.path == nil {
+			// Top to bottom: CJK characters upright, one em each; other
+			// characters turned a quarter clockwise, centred on the line.
+			m := r.fonts.Metrics(q, 'x')
+			size := st.fontSize
+			for k := i; k < j; k++ {
+				rn := chars[k].r
+				sh := r.fonts.Shape(string(rn), q, size, st.lang)
+				rot := 0.0
+				if chars[k].rot != nil {
+					rot = *chars[k].rot
+				}
+				if k > i {
+					penX += chars[k].dx
+					penY += chars[k].dy
+				}
+				upright := uprightInVertical(rn)
+				startY := penY
+				adv := 0.0
+				for _, g := range sh.Glyphs {
+					if upright {
+						g.X = penX - g.Advance/2
+						g.Y = penY + m.Ascent*size
+						chunk = append(chunk, glyphOut{g: g, rot: rot, st: st, lc: ch.lc, vert: true, penY: startY, advY: size})
+						adv = size
+					} else {
+						g.X = penX - (m.Ascent-m.Descent)/2*size
+						g.Y = penY
+						chunk = append(chunk, glyphOut{g: g, rot: rot + 90, st: st, lc: ch.lc, vert: true, penY: startY, advY: g.Advance})
+						penY += g.Advance
+						adv = 0
+					}
+				}
+				penY += adv + st.letterSpacing
+			}
+			i = j
+			continue
+		}
 		shaped := r.fonts.Shape(string(text), q, st.fontSize, st.lang)
 		shiftY := baselineShift(st, ch.lc, r.fonts, q)
 		spanStart := penX
@@ -486,4 +542,18 @@ func (m *pathMeasure) at(d float64) (gfx.Point, float64, bool) {
 	}
 	dir := b.Sub(a)
 	return a.Lerp(b, t), math.Atan2(dir.Y, dir.X), true
+}
+
+func isVertical(mode string) bool {
+	switch mode {
+	case "tb", "tb-rl", "vertical-rl", "vertical-lr":
+		return true
+	}
+	return false
+}
+
+// uprightInVertical: CJK characters, kana and Hangul stand upright in vertical text.
+func uprightInVertical(r rune) bool {
+	return r >= 0x1100 && r <= 0x11FF || r >= 0x2E80 && r <= 0xA4CF || r >= 0xAC00 && r <= 0xD7AF ||
+		r >= 0xF900 && r <= 0xFAFF || r >= 0xFE30 && r <= 0xFE4F || r >= 0xFF00 && r <= 0xFFEF || r >= 0x20000
 }

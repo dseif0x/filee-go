@@ -149,8 +149,9 @@ func (c *Converter) locate() {
 // Locate finds soffice: FILEE_LIBREOFFICE, Filee's engine folder, the PATH and the usual install places.
 func Locate() string {
 	spec := tools.Spec{
-		Names: []string{"soffice"},
-		Env:   "FILEE_LIBREOFFICE",
+		Names:   []string{"soffice"},
+		Env:     "FILEE_LIBREOFFICE",
+		Package: "libreoffice",
 		Dirs: map[string][]string{
 			"darwin":  {"libreoffice/LibreOffice.app/Contents/MacOS", "libreoffice/Contents/MacOS", "/Applications/LibreOffice.app/Contents/MacOS", "~/Applications/LibreOffice.app/Contents/MacOS"},
 			"linux":   {"libreoffice/program", "/usr/lib/libreoffice/program", "/usr/lib64/libreoffice/program"},

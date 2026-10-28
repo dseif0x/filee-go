@@ -50,7 +50,7 @@ const (
 )
 
 // Spec finds rhwp: FILEE_RHWP, Filee's engine folder (engines/rhwp), the PATH.
-var Spec = tools.Spec{Names: []string{"rhwp"}, Env: "FILEE_RHWP", Dirs: map[string][]string{
+var Spec = tools.Spec{Names: []string{"rhwp"}, Env: "FILEE_RHWP", Package: "rhwp", Dirs: map[string][]string{
 	"darwin": {"rhwp", "rhwp/bin"}, "linux": {"rhwp", "rhwp/bin"}, "windows": {"rhwp", "rhwp/bin"},
 }}
 
@@ -58,7 +58,7 @@ var Spec = tools.Spec{Names: []string{"rhwp"}, Env: "FILEE_RHWP", Dirs: map[stri
 func Locate() string { return tools.Find(Spec) }
 
 func locateCalibre() string {
-	return tools.Find(tools.Spec{Names: []string{"ebook-convert"}, Env: "FILEE_CALIBRE", Dirs: map[string][]string{
+	return tools.Find(tools.Spec{Names: []string{"ebook-convert"}, Env: "FILEE_CALIBRE", Package: "calibre", Dirs: map[string][]string{
 		"darwin": {"calibre", "/Applications/calibre.app/Contents/MacOS"}, "linux": {"calibre", "/opt/calibre"},
 		"windows": {"calibre", `C:\Program Files\Calibre2`},
 	}})

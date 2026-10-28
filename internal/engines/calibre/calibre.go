@@ -52,8 +52,9 @@ const PdfCost = 23
 
 // Spec finds ebook-convert: FILEE_CALIBRE, Filee's engine folder, the PATH and the usual install places.
 var Spec = tools.Spec{
-	Names: []string{"ebook-convert"},
-	Env:   "FILEE_CALIBRE",
+	Names:   []string{"ebook-convert"},
+	Env:     "FILEE_CALIBRE",
+	Package: "calibre",
 	Dirs: map[string][]string{
 		"darwin":  {"calibre/calibre.app/Contents/MacOS", "calibre/Contents/MacOS", "/Applications/calibre.app/Contents/MacOS", "~/Applications/calibre.app/Contents/MacOS"},
 		"linux":   {"calibre", "/opt/calibre"},

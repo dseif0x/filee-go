@@ -106,7 +106,7 @@ func (*Converter) Edges() []convert.Edge {
 
 // Locate finds pandoc: FILEE_PANDOC, Filee's engine folder, the PATH.
 func Locate() string {
-	return tools.Find(tools.Spec{Names: []string{"pandoc"}, Env: "FILEE_PANDOC", Dirs: map[string][]string{
+	return tools.Find(tools.Spec{Names: []string{"pandoc"}, Env: "FILEE_PANDOC", Package: "pandoc", Dirs: map[string][]string{
 		"darwin": {"pandoc", "pandoc/bin"}, "linux": {"pandoc", "pandoc/bin"}, "windows": {"pandoc", "pandoc/bin", `C:\Program Files\Pandoc`},
 	}})
 }

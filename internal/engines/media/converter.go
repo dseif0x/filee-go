@@ -30,8 +30,10 @@ import (
 // FfmpegSpec finds FFmpeg: FILEE_FFMPEG, Filee's engines folder, PATH,
 // Homebrew / MacPorts on macOS, the usual Windows folders.
 var FfmpegSpec = tools.Spec{
-	Names: []string{"ffmpeg"},
-	Env:   "FILEE_FFMPEG",
+	Names:    []string{"ffmpeg"},
+	Env:      "FILEE_FFMPEG",
+	Package:  "ffmpeg",
+	Requires: []string{"ffprobe"},
 	Dirs: map[string][]string{
 		"darwin":  {"ffmpeg", "ffmpeg/bin", "/opt/homebrew/opt/ffmpeg/bin", "/Applications/FFmpeg", "~/Applications/FFmpeg"},
 		"linux":   {"ffmpeg", "ffmpeg/bin"},

@@ -31,8 +31,9 @@ import (
 // Spec finds Ghostscript: FILEE_GHOSTSCRIPT, Filee's engines folder, PATH,
 // Homebrew on macOS, C:\Program Files\gs\gs*\bin (newest first) on Windows.
 var Spec = tools.Spec{
-	Names: []string{"gs", "gswin64c"},
-	Env:   "FILEE_GHOSTSCRIPT",
+	Names:   []string{"gs", "gswin64c"},
+	Env:     "FILEE_GHOSTSCRIPT",
+	Package: "ghostscript",
 	Dirs: map[string][]string{
 		"darwin":  {"ghostscript", "ghostscript/bin", "/opt/homebrew/opt/ghostscript/bin"},
 		"linux":   {"ghostscript", "ghostscript/bin"},

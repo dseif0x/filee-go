@@ -22,8 +22,9 @@ import (
 
 // SevenZipSpec finds the program.
 var SevenZipSpec = tools.Spec{
-	Names: []string{"7zz", "7z", "7za"},
-	Env:   "FILEE_7ZIP",
+	Names:   []string{"7zz", "7z", "7za"},
+	Env:     "FILEE_7ZIP",
+	Package: "7zip",
 	Dirs: map[string][]string{
 		"darwin":  {"7zip"},
 		"linux":   {"7zip"},

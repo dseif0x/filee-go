@@ -5,6 +5,7 @@ package all
 import (
 	"github.com/dseif0x/filee-go/internal/convert"
 	"github.com/dseif0x/filee-go/internal/engines/media"
+	"github.com/dseif0x/filee-go/internal/engines/ocr"
 )
 
 // Converters returns a fresh instance of every engine.
@@ -13,6 +14,9 @@ func Converters() []convert.Converter {
 		// Engines add themselves here, one line each (keep the groups).
 		// Media
 		media.New(),
+		// OCR: Apple Vision first, so a Mac needs no download for the languages it reads.
+		ocr.NewVision(),
+		ocr.NewTesseract(),
 	}
 }
 

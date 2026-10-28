@@ -591,6 +591,11 @@ func fontQuery(f *font) gfx.FontQuery {
 // drawText draws text at a logical point with the current font and alignment;
 // dx are optional per-character advances in logical units.
 func (p *player) drawText(x, y float64, text string, dx []float64, opaqueRect *[4]float64) {
+	p.drawTextDY(x, y, text, dx, nil, opaqueRect)
+}
+
+// drawTextDY also takes vertical offsets per character (ETO_PDY).
+func (p *player) drawTextDY(x, y float64, text string, dx, dy []float64, opaqueRect *[4]float64) {
 	if text == "" {
 		return
 	}
@@ -622,6 +627,14 @@ func (p *player) drawText(x, y float64, text string, dx []float64, opaqueRect *[
 	// Advances: the Dx array when given, else the shaped advances plus char extra.
 	adv := shaped.Advance
 	positions := make([]float64, len(runes)+1)
+	rises := make([]float64, len(runes)+1)
+	for i := range runes {
+		if i < len(dy) {
+			rises[i+1] = rises[i] + dy[i]
+		} else {
+			rises[i+1] = rises[i]
+		}
+	}
 	if len(dx) >= len(runes) {
 		for i := range runes {
 			positions[i+1] = positions[i] + dx[i]
@@ -648,7 +661,14 @@ func (p *player) drawText(x, y float64, text string, dx []float64, opaqueRect *[
 	default: // top
 		oy = metrics.Ascent * size
 	}
-	path := gfx.NewPath()
+	// Glyphs are drawn y down; escapement turns the line (counter-clockwise on screen).
+	t := gfx.Translate(x, y)
+	angle := f.escapement / 10 * math.Pi / 180
+	if flipY {
+		t = t.Mul(gfx.Scale(1, -1))
+	}
+	t = m.Mul(t.Mul(gfx.Rotate(-angle)))
+	paint := gfx.Solid(p.st.textColor.color())
 	for _, g := range shaped.Glyphs {
 		gx := g.X
 		if len(dx) >= len(runes) && g.Cluster < len(positions) {
@@ -656,28 +676,29 @@ func (p *player) drawText(x, y float64, text string, dx []float64, opaqueRect *[
 		} else if p.st.charExtra != 0 {
 			gx += p.st.charExtra * float64(g.Cluster)
 		}
-		gp := p.fonts.GlyphPath(gfx.ShapedGlyph{Face: g.Face, GID: g.GID, Size: g.Size, X: gx + ox, Y: g.Y + oy})
-		if gp != nil {
-			path.Append(gp)
+		gy := g.Y
+		if g.Cluster < len(rises) {
+			rise := rises[g.Cluster]
+			if flipY {
+				rise = -rise
+			}
+			gy += rise
+		}
+		if unit := p.fonts.UnitGlyph(g); unit != nil && !unit.Empty() {
+			p.dev.Fill(unit, t.Mul(gfx.Translate(gx+ox, gy+oy)).Mul(gfx.Scale(g.Size, g.Size)), gfx.NonZero, paint)
 		}
 	}
 	if f.underline || f.strikeout {
 		th := size / 15
+		lines := gfx.NewPath()
 		if f.underline {
-			path.Rect(ox, size*0.1, adv, th)
+			lines.Rect(ox, oy+size*0.1, adv, th)
 		}
 		if f.strikeout {
-			path.Rect(ox, -size*0.3, adv, th)
+			lines.Rect(ox, oy-size*0.3, adv, th)
 		}
+		p.dev.Fill(lines, t, gfx.NonZero, paint)
 	}
-	// Glyphs are drawn y down; escapement turns the line (counter-clockwise on screen).
-	t := gfx.Translate(x, y)
-	angle := f.escapement / 10 * math.Pi / 180
-	if flipY {
-		t = t.Mul(gfx.Scale(1, -1))
-	}
-	t = t.Mul(gfx.Rotate(-angle))
-	p.dev.Fill(path, m.Mul(t), gfx.NonZero, gfx.Solid(p.st.textColor.color()))
 	if p.st.textAlign&taUpdateCP != 0 {
 		p.st.cur.X += adv
 	}

@@ -49,7 +49,7 @@ func (p *player) emfText(r emfReader, wide bool) {
 		end := min(len(r.b), offString+n)
 		text = decodeANSI(r.b[offString:end], p.st.font.charset)
 	}
-	var dx []float64
+	var dx, dy []float64
 	if offDx > 0 && offDx+4*n <= len(r.b) {
 		count := len([]rune(text))
 		step := 4
@@ -58,6 +58,9 @@ func (p *player) emfText(r emfReader, wide bool) {
 		}
 		for i := 0; i < count && offDx+step*i+4 <= len(r.b); i++ {
 			dx = append(dx, r.i32(offDx+step*i))
+			if step == 8 {
+				dy = append(dy, r.i32(offDx+step*i+4))
+			}
 		}
 	}
 	var opaque *[4]float64
@@ -68,11 +71,11 @@ func (p *player) emfText(r emfReader, wide bool) {
 	if clipped {
 		saved := p.st.clip
 		p.st.clip = append(append([]clipItem(nil), p.st.clip...), clipItem{shapes: []gfx.ClipShape{{Path: rectPath(rect[0], rect[1], rect[2], rect[3]), M: p.logical(), Rule: gfx.NonZero}}})
-		p.drawText(x, y, text, dx, opaque)
+		p.drawTextDY(x, y, text, dx, dy, opaque)
 		p.st.clip = saved
 		return
 	}
-	p.drawText(x, y, text, dx, opaque)
+	p.drawTextDY(x, y, text, dx, dy, opaque)
 }
 
 // gradientFill plays GRADIENTFILL: rectangles as linear gradients, triangles

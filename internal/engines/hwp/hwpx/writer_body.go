@@ -218,11 +218,11 @@ func (w *writer) paragraph(p *doc.Paragraph, leadingRun string) string {
 // runBuilder collects runs: consecutive content with the same character shape shares one hp:run and one hp:t, and
 // controls (fields, bookmarks) and objects (pictures, tables, text boxes) go between the text parts.
 type runBuilder struct {
-	output        strings.Builder
-	items         strings.Builder
-	charPr        string
-	open          bool // a charPr is current
-	textOpen      bool
+	output         strings.Builder
+	items          strings.Builder
+	charPr         string
+	open           bool // a charPr is current
+	textOpen       bool
 	endsWithObject bool
 }
 

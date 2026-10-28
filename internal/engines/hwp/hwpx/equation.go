@@ -137,17 +137,17 @@ type MathBox struct{ Width, Height, Baseline float64 }
 
 // rhwp's layout constants (fractions of the font size).
 const (
-	scriptScale       = 0.7
-	fractionPad       = 0.2
-	fractionLine      = 0.04
-	rootPad           = 0.1
-	bracketPad        = 0.08
-	bigOperatorScale  = 1.5
-	integralScale     = 2.5
-	bigOperatorTrail  = 0.45
-	matrixColumnGap   = 0.8
-	matrixRowGap      = 0.3
-	mathAxis          = 0.25
+	scriptScale      = 0.7
+	fractionPad      = 0.2
+	fractionLine     = 0.04
+	rootPad          = 0.1
+	bracketPad       = 0.08
+	bigOperatorScale = 1.5
+	integralScale    = 2.5
+	bigOperatorTrail = 0.45
+	matrixColumnGap  = 0.8
+	matrixRowGap     = 0.3
+	mathAxis         = 0.25
 )
 
 // ───────────────────────── Script ─────────────────────────
@@ -432,28 +432,28 @@ func linear(node MathNode, sb *strings.Builder) {
 		linear(n.Body, sb)
 		sb.WriteString(n.Right)
 	case *MathAccent:
-		mark := "̲" // UNDERLINE, under
+		mark := "\u0332" // UNDERLINE, under
 		switch n.Command {
 		case "hat":
-			mark = "̂"
+			mark = "\u0302"
 		case "check":
-			mark = "̌"
+			mark = "\u030C"
 		case "tilde":
-			mark = "̃"
+			mark = "\u0303"
 		case "acute":
-			mark = "́"
+			mark = "\u0301"
 		case "grave":
-			mark = "̀"
+			mark = "\u0300"
 		case "dot":
-			mark = "̇"
+			mark = "\u0307"
 		case "ddot":
-			mark = "̈"
+			mark = "\u0308"
 		case "bar", "OVERLINE":
-			mark = "̅"
+			mark = "\u0305"
 		case "vec":
-			mark = "⃗"
+			mark = "\u20D7"
 		case "dyad":
-			mark = "⃡"
+			mark = "\u20E1"
 		}
 		body := Linear(n.Body)
 		if utf8.RuneCountInString(body) == 1 {

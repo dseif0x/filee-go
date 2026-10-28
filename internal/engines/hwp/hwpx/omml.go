@@ -67,9 +67,9 @@ var mathReservedPrefixes = []string{
 
 // mathAccents are accent characters (m:acc) → decoration command.
 var mathAccents = map[rune]string{
-	'̂': "hat", '^': "hat", '̌': "check", '̃': "tilde", '~': "tilde", '́': "acute", '̀': "grave",
-	'̇': "dot", '̈': "ddot", '̄': "bar", '̅': "bar", '¯': "bar", '⃗': "vec", '⃖': "vec",
-	'→': "vec", '⃡': "dyad",
+	'\u0302': "hat", '^': "hat", '\u030C': "check", '\u0303': "tilde", '~': "tilde", '\u0301': "acute", '\u0300': "grave",
+	'\u0307': "dot", '\u0308': "ddot", '\u0304': "bar", '\u0305': "bar", '¯': "bar", '\u20D7': "vec", '\u20D6': "vec",
+	'→': "vec", '\u20E1': "dyad",
 }
 
 func setOf(words ...string) map[string]bool {
@@ -215,7 +215,7 @@ func mathElement(e *xmltree.Element, output []MathNode, roman bool) []MathNode {
 	case "acc":
 		chr := mathVal(e.ChildNS(nsM, "accPr").ChildNS(nsM, "chr"))
 		body := mathArgument(e, "e", roman)
-		mark := '̂'
+		mark := '\u0302'
 		if chr != "" {
 			mark = []rune(chr)[0]
 		}
@@ -495,13 +495,13 @@ func mathText(text string, output []MathNode, style mathStyle) []MathNode {
 					items = append(items, &MathText{Text: string(letter)})
 				}
 			}
-		case c == ' ' || c == ' ' || c == ' ' || c == ' ' || c == ' ' || c == ' ':
+		case c == ' ' || c == '\u00A0' || c == '\u2009' || c == '\u2005' || c == '\u2006' || c == '\u200A':
 			if style == styleNormal {
 				items = append(items, &MathSpace{})
 			}
 		case c == '&':
 			items = append(items, &MathAlign{})
-		case c == '−' || c == '–':
+		case c == '\u2212' || c == '\u2013':
 			items = append(items, &MathSymbol{Text: "-"})
 		case strings.ContainsRune("+-=<>,.!|/*:'()[]", c):
 			items = append(items, &MathSymbol{Text: string(c)})
@@ -512,7 +512,7 @@ func mathText(text string, output []MathNode, style mathStyle) []MathNode {
 				items = append(items, &MathBigOperator{Command: big, Glyph: string(c)})
 			} else if c == '#' || c == '_' || c == '^' || c == '`' {
 				items = append(items, &MathQuoted{Text: string(c)})
-			} else if c == '"' || unicode.IsControl(c) || c == '​' {
+			} else if c == '"' || unicode.IsControl(c) || c == '\u200B' {
 				// Quote marks would end a quoted text; zero-width and control characters show nothing.
 			} else if c > 0xFFFF {
 				items = append(items, &MathText{Text: mathAlphanumeric(c)})

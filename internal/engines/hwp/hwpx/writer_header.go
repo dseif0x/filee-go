@@ -42,9 +42,15 @@ type borderFillKey struct {
 	fill    string
 }
 
-func hh(local string, attrs ...string) *xmltree.Element { return xmltree.New("hh", nsHH, local, attrs...) }
-func hc(local string, attrs ...string) *xmltree.Element { return xmltree.New("hc", nsHC, local, attrs...) }
-func hp(local string, attrs ...string) *xmltree.Element { return xmltree.New("hp", nsHP, local, attrs...) }
+func hh(local string, attrs ...string) *xmltree.Element {
+	return xmltree.New("hh", nsHH, local, attrs...)
+}
+func hc(local string, attrs ...string) *xmltree.Element {
+	return xmltree.New("hc", nsHC, local, attrs...)
+}
+func hp(local string, attrs ...string) *xmltree.Element {
+	return xmltree.New("hp", nsHP, local, attrs...)
+}
 
 func indexOf(list []string, s string) int {
 	for i, v := range list {

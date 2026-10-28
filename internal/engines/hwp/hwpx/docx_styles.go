@@ -28,18 +28,18 @@ type tabDef struct {
 
 // paraProps are paragraph properties; later layers (style → numbering → direct) override earlier ones.
 type paraProps struct {
-	jc                                          string
+	jc                                                   string
 	left, right, firstLine, hanging, before, after, line *int
 	// Indents in hundredths of a character (w:leftChars ...), which Chinese and Japanese documents use. A non-zero
 	// value wins over the twips one; "0" means the twips value counts again.
-	leftChars, rightChars, firstLineChars, hangingChars *int
-	lineRule                                            string
+	leftChars, rightChars, firstLineChars, hangingChars            *int
+	lineRule                                                       string
 	keepNext, keepLines, pageBreakBefore, widowControl, snapToGrid *bool
-	outlineLevel                                        *int
-	numID                                               string
-	hasNumID                                            bool
-	ilvl                                                *int
-	tabs                                                []tabDef
+	outlineLevel                                                   *int
+	numID                                                          string
+	hasNumID                                                       bool
+	ilvl                                                           *int
+	tabs                                                           []tabDef
 }
 
 func (p *paraProps) clone() *paraProps {
@@ -154,9 +154,9 @@ func firstOf(a, b, c *int) *int {
 
 // runProps are run (character) properties.
 type runProps struct {
-	bold, italic, underline, strike, hidden                                    *bool
+	bold, italic, underline, strike, hidden                                        *bool
 	vertAlign, color, highlight, shade, ascii, eastAsia, asciiTheme, eastAsiaTheme string
-	size, spacing                                                                 *int
+	size, spacing                                                                  *int
 }
 
 func (r *runProps) clone() *runProps {

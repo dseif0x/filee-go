@@ -18,15 +18,15 @@ import (
 
 // docxBuilder builds small .docx files for tests, so DOCX features can be tested without sample documents.
 type docxBuilder struct {
-	body       strings.Builder
-	sectPr     string
-	styles     string
-	numbering  string
-	settings   string
-	rels       [][4]string // id, type, target, external
-	parts      map[string]string
-	partOrder  []string
-	media      map[string][]byte
+	body      strings.Builder
+	sectPr    string
+	styles    string
+	numbering string
+	settings  string
+	rels      [][4]string // id, type, target, external
+	parts     map[string]string
+	partOrder []string
+	media     map[string][]byte
 }
 
 const docxNamespaces = `xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" ` +
@@ -229,7 +229,9 @@ func hwpxPart(t *testing.T, path, name string) *xmltree.Element {
 	return d.Root
 }
 
-func section0(t *testing.T, path string) *xmltree.Element { return hwpxPart(t, path, "Contents/section0.xml") }
+func section0(t *testing.T, path string) *xmltree.Element {
+	return hwpxPart(t, path, "Contents/section0.xml")
+}
 
 // paragraphWith is the innermost hp:p whose own runs hold text.
 func paragraphWith(t *testing.T, root *xmltree.Element, text string) *xmltree.Element {

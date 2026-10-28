@@ -191,7 +191,9 @@ func TestDocxParagraphAndCharacterFormattingListsAndDocumentGrid(t *testing.T) {
 }
 
 func TestDocxTablesKeepMergedCellsBordersAndShading(t *testing.T) {
-	cell := func(content, tcPr string) string { return "<w:tc><w:tcPr>" + tcPr + "</w:tcPr>" + wP(wR(content)) + "</w:tc>" }
+	cell := func(content, tcPr string) string {
+		return "<w:tc><w:tcPr>" + tcPr + "</w:tcPr>" + wP(wR(content)) + "</w:tc>"
+	}
 	b := newDocx().add(`<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:jc w:val="center"/></w:tblPr>` +
 		`<w:tblGrid><w:gridCol w:w="2000"/><w:gridCol w:w="3000"/><w:gridCol w:w="2000"/></w:tblGrid>` +
 		"<w:tr><w:trPr><w:tblHeader/></w:trPr>" + cell("가로 병합", `<w:gridSpan w:val="2"/><w:shd w:val="pct10" w:color="auto" w:fill="auto"/>`) +
@@ -207,10 +209,10 @@ func TestDocxTablesKeepMergedCellsBordersAndShading(t *testing.T) {
 	eq(t, "align", table.Child("pos").A("horzAlign"), "CENTER")
 
 	type cellInfo struct {
-		text                             string
+		text                              string
 		row, col, rowSpan, colSpan, width int
-		borderFill                       *xmltree.Element
-		valign                           string
+		borderFill                        *xmltree.Element
+		valign                            string
 	}
 	var cells []cellInfo
 	covered := map[[2]int]int{}

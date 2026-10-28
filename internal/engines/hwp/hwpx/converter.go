@@ -53,7 +53,9 @@ func ReaderFormats(withPandoc bool) []string {
 }
 
 // NeedsPandoc tells whether format can only be read with Pandoc.
-func NeedsPandoc(format string) bool { return !doc.HasReader(format) && slices.Contains(PandocFormats(), format) }
+func NeedsPandoc(format string) bool {
+	return !doc.HasReader(format) && slices.Contains(PandocFormats(), format)
+}
 
 // OcrReader, when set, reads a PDF through its OCR text layer (the PDF engine registers it); used when the preset
 // asks for OCR.

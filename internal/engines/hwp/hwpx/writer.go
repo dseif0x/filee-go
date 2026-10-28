@@ -53,18 +53,18 @@ type writer struct {
 	nextObjectID    int
 
 	// header.xml caches (writer_header.go)
-	charPrCache  map[charPrKey]string
-	paraPrCache  map[paraPrKeyFull]string
-	numberingIDs map[*doc.Numbering]string
-	borderFills  map[borderFillKey]string
-	tabPrIDs     map[string]string
-	fontIDs      map[[2]string]int
-	headings     map[int]styleIDs
-	charPrs      map[string]*xmltree.Element
-	paraPrs      map[string]*xmltree.Element
-	maxCharPr    int
-	maxParaPr    int
-	normal       styleIDs
+	charPrCache   map[charPrKey]string
+	paraPrCache   map[paraPrKeyFull]string
+	numberingIDs  map[*doc.Numbering]string
+	borderFills   map[borderFillKey]string
+	tabPrIDs      map[string]string
+	fontIDs       map[[2]string]int
+	headings      map[int]styleIDs
+	charPrs       map[string]*xmltree.Element
+	paraPrs       map[string]*xmltree.Element
+	maxCharPr     int
+	maxParaPr     int
+	normal        styleIDs
 	footnoteStyle *styleIDs
 
 	// body state (writer_body.go)

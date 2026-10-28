@@ -281,15 +281,15 @@ func (r *hwpxReader) text(t *xmltree.Element, b *paragraphBuilder, format doc.Ch
 			}
 		case "nbSpace":
 			if !r.body.deleted {
-				b.addText(" ", r.highlighted(format))
+				b.addText("\u00A0", r.highlighted(format))
 			}
 		case "fwSpace":
 			if !r.body.deleted {
-				b.addText(" ", r.highlighted(format)) // fixed-width space: as wide as a digit
+				b.addText("\u2007", r.highlighted(format)) // fixed-width space: as wide as a digit
 			}
 		case "hyphen":
 			if !r.body.deleted {
-				b.addText("­", r.highlighted(format)) // soft hyphen, shown only at a line end
+				b.addText("\u00AD", r.highlighted(format)) // soft hyphen, shown only at a line end
 			}
 		case "markpenBegin":
 			r.body.markpen = hwpColor(element.A("color"))

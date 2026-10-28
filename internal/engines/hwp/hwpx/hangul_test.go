@@ -101,7 +101,9 @@ func hangulStylePackage(t *testing.T, folder string) string {
 		return fmt.Sprintf(`<hp:p id="0" paraPrIDRef="%s" styleIDRef="0" pageBreak="0" columnBreak="%s" merged="0">%s`, paraPr, b01(columnBreak), runs) +
 			`<hp:linesegarray><hp:lineseg textpos="0" vertpos="0" vertsize="1000" textheight="1000" baseline="850" spacing="600" horzpos="0" horzsize="42520" flags="393216"/></hp:linesegarray></hp:p>`
 	}
-	r := func(content, charPr string) string { return fmt.Sprintf(`<hp:run charPrIDRef="%s">%s</hp:run>`, charPr, content) }
+	r := func(content, charPr string) string {
+		return fmt.Sprintf(`<hp:run charPrIDRef="%s">%s</hp:run>`, charPr, content)
+	}
 	tt := func(text string) string { return "<hp:t>" + text + "</hp:t>" }
 	subList := func(paragraphs, vertAlign string) string {
 		return fmt.Sprintf(`<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="%s" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">%s</hp:subList>`, vertAlign, paragraphs)
@@ -135,7 +137,9 @@ func hangulStylePackage(t *testing.T, folder string) string {
 		return fmt.Sprintf(`<hp:ctrl><hp:fieldBegin id="%s" type="HYPERLINK" name="" editable="0" dirty="0" zorder="-1" fieldid="627600491"><hp:parameters cnt="2" name="">`, id) +
 			fmt.Sprintf(`<hp:integerParam name="Prop">0</hp:integerParam><hp:stringParam name="Command">%s</hp:stringParam></hp:parameters></hp:fieldBegin></hp:ctrl>`, command)
 	}
-	fieldEnd := func(id string) string { return fmt.Sprintf(`<hp:ctrl><hp:fieldEnd beginIDRef="%s" fieldid="627600491"/></hp:ctrl>`, id) }
+	fieldEnd := func(id string) string {
+		return fmt.Sprintf(`<hp:ctrl><hp:fieldEnd beginIDRef="%s" fieldid="627600491"/></hp:ctrl>`, id)
+	}
 
 	secPr := `<hp:secPr id="" textDirection="HORIZONTAL" spaceColumns="1134" tabStop="8000" tabStopVal="4000" tabStopUnit="HWPUNIT" outlineShapeIDRef="1" memoShapeIDRef="0" textVerticalWidthHead="0" masterPageCnt="0">` +
 		`<hp:grid lineGrid="0" charGrid="0" wonggojiFormat="0"/><hp:startNum pageStartsOn="BOTH" page="5" pic="0" tbl="0" equation="0"/>` +

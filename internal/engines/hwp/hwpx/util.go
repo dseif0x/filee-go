@@ -49,10 +49,10 @@ func itoa(v int) string { return strconv.Itoa(v) }
 
 // charKey is a comparable form of a character format, for caches.
 type charKey struct {
-	set                                          uint32
-	bold, italic, underline, strike, sup, sub    bool
-	size, spacing                                int
-	font, eastAsian, color, shade                string
+	set                                       uint32
+	bold, italic, underline, strike, sup, sub bool
+	size, spacing                             int
+	font, eastAsian, color, shade             string
 }
 
 func keyOfChar(f doc.CharFormat) charKey {
@@ -92,12 +92,12 @@ func keyOfChar(f doc.CharFormat) charKey {
 
 // paraKey is a comparable form of a paragraph format (tab stops by content).
 type paraKey struct {
-	set                                         uint32
-	align                                       doc.Align
-	left, right, firstLine, before, after       int
-	line                                        doc.LineSpacing
-	keepWithNext, keepLines, widowOrphan, rtl   bool
-	tabs                                        string
+	set                                       uint32
+	align                                     doc.Align
+	left, right, firstLine, before, after     int
+	line                                      doc.LineSpacing
+	keepWithNext, keepLines, widowOrphan, rtl bool
+	tabs                                      string
 }
 
 func keyOfPara(f doc.ParaFormat) paraKey {

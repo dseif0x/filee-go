@@ -19,7 +19,7 @@ func TextWidth(text string, size int) float64 {
 		// Average advances (em) of the fonts Korean documents use (맑은 고딕, 굴림, 함초롬, Calibri ...).
 		var em float64
 		switch {
-		case ch == ' ' || ch == ' ':
+		case ch == ' ' || ch == '\u00A0':
 			em = 0.3
 		case ch == '.' || ch == ',' || ch == ':' || ch == ';' || ch == '\'' || ch == '!' || ch == '|' || ch == '(' || ch == ')' || ch == '[' || ch == ']' || ch == '-':
 			em = 0.3

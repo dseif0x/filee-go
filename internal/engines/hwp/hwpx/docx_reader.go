@@ -77,16 +77,16 @@ type docxReader struct {
 	part        *docxPart
 
 	// styles (docx_styles.go)
-	styles          map[string]*docxStyle
-	resolvedCache   map[string]resolvedStyle
-	numberingLevels map[string][]*numberingLevel
-	numberings      map[string]*doc.Numbering
-	defaultPara     *paraProps
-	defaultRun      *runProps
-	defaultParaStyle string
-	defaultTableStyle string
+	styles               map[string]*docxStyle
+	resolvedCache        map[string]resolvedStyle
+	numberingLevels      map[string][]*numberingLevel
+	numberings           map[string]*doc.Numbering
+	defaultPara          *paraProps
+	defaultRun           *runProps
+	defaultParaStyle     string
+	defaultTableStyle    string
 	minorFont, majorFont [2]string
-	themeColors     map[string]string
+	themeColors          map[string]string
 }
 
 // ReadDocx reads a .docx file; embedded pictures are extracted into mediaFolder.

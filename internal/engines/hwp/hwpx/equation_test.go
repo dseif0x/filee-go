@@ -66,19 +66,19 @@ func mMatrix(rows ...[]string) string {
 var equationSamples = []struct{ omml, script, linear string }{
 	{mFrac(mR("a+b"), mR("2c")), "{{a + b} over {2 c}}", "(a+b)/(2c)"},
 	{mSup(mR("x"), mR("2")) + mR("+") + mSubSup(mR("y"), mR("i"), mR("n")), "x ^{2} + y _{i} ^{n}", "x^2+y_i^n"},
-	{mRad(mSup(mR("b"), mR("2"))+mR("−4ac"), "") + mR("+") + mRad(mR("x"), mR("3")), "sqrt {b ^{2} - 4 ac} + root {3} of {x}", "√(b^2-4ac)+[3]√x"},
+	{mRad(mSup(mR("b"), mR("2"))+mR("\u22124ac"), "") + mR("+") + mRad(mR("x"), mR("3")), "sqrt {b ^{2} - 4 ac} + root {3} of {x}", "√(b^2-4ac)+[3]√x"},
 	{mNary("∑", mR("i=1"), mR("n"), mSup(mR("i"), mR("2"))), "SUM _{i = 1} ^{n} i ^{2}", "∑_(i=1)^n i^2"},
-	{mNary("∫", mR("0"), mR("∞"), mSup(mR("e"), mR("−")+mSup(mR("x"), mR("2")))+mR("dx")), "INT _{0} ^{INF} {e ^{- x ^{2}} dx}", "∫_0^∞ e^(-x^2)dx"},
+	{mNary("∫", mR("0"), mR("∞"), mSup(mR("e"), mR("\u2212")+mSup(mR("x"), mR("2")))+mR("dx")), "INT _{0} ^{INF} {e ^{- x ^{2}} dx}", "∫_0^∞ e^(-x^2)dx"},
 	{mR("α+β=γ, Ω"), "alpha + beta = gamma , Omega", "α+β=γ,Ω"},
 	{mR("A=") + mDelimited(mMatrix([]string{mR("1"), mR("2")}, []string{mR("3"), mR("4")}), "", ""), "A = pmatrix {1 & 2 # 3 & 4}", "A=(1, 2; 3, 4)"},
-	{mSub(mR("ω"), mR("ref")) + mR("+") + mSub(mR("x"), mR("in")) + mR("+") + mDelimited(mR("t−1"), "", ""),
+	{mSub(mR("ω"), mR("ref")) + mR("+") + mSub(mR("x"), mR("in")) + mR("+") + mDelimited(mR("t\u22121"), "", ""),
 		"omega _{ref} + x _{i n} + LEFT ( t - 1 RIGHT )", "ω_(ref)+x_(in)+(t-1)"},
 	{"<m:func><m:fName><m:limLow><m:e>" + mR("lim", "p") + "</m:e><m:lim>" + mR("x→0") + "</m:lim></m:limLow></m:fName><m:e>" +
 		mFrac("<m:func><m:fName>"+mR("sin", "p")+"</m:fName><m:e>"+mR("x")+"</m:e></m:func>", mR("x")) + "</m:e></m:func>",
 		"lim _{x rarrow 0} {{sin x} over {x}}", "lim_(x→0) (sin x)/x"},
 	{"<m:acc><m:e>" + mR("a") + "</m:e></m:acc>" + mR("+") + `<m:bar><m:barPr><m:pos m:val="top"/></m:barPr><m:e>` + mR("AB") + "</m:e></m:bar>",
 		"hat {a} + OVERLINE {AB}", "â+overline(AB)"},
-	{mR("f(x)=") + mDelimited("<m:eqArr><m:e>"+mR("x,&x≥0")+"</m:e><m:e>"+mR("−x,&x<0")+"</m:e></m:eqArr>", "{", ""),
+	{mR("f(x)=") + mDelimited("<m:eqArr><m:e>"+mR("x,&x≥0")+"</m:e><m:e>"+mR("\u2212x,&x<0")+"</m:e></m:eqArr>", "{", ""),
 		"f ( x ) = cases {x , & x GEQ 0 # - x , & x < 0}", "f(x)={x, x≥0; -x, x<0"},
 }
 

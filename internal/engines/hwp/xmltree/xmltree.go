@@ -232,7 +232,9 @@ func (e *Element) Children(local string) []*Element {
 }
 
 // Is tells whether the element has this namespace and local name.
-func (e *Element) Is(space, local string) bool { return e != nil && e.Local == local && e.Space == space }
+func (e *Element) Is(space, local string) bool {
+	return e != nil && e.Local == local && e.Space == space
+}
 
 // Walk calls fn for every descendant element (not e itself), depth first, in document order. fn returning false
 // skips the element's own descendants.

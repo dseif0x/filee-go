@@ -68,16 +68,16 @@ const XhtmlCSS = "body{font-family:serif;line-height:1.6;margin:0 3%;}\n" +
 const chapterLimit = 150_000
 
 type xhtmlWriter struct {
-	options        XhtmlOptions
+	options         XhtmlOptions
 	bookmarkChapter map[string]int
-	ids            map[string]string
-	usedIDs        map[string]bool
-	bodySize       int
-	chapter        int
-	headingCount   int
-	noteCount      int
-	headings       []XhtmlHeading
-	notes          strings.Builder
+	ids             map[string]string
+	usedIDs         map[string]bool
+	bodySize        int
+	chapter         int
+	headingCount    int
+	noteCount       int
+	headings        []XhtmlHeading
+	notes           strings.Builder
 }
 
 // XhtmlWrite converts a document into one page or a list of chapters.
@@ -550,7 +550,7 @@ func hasVisible(inlines []doc.Inline) bool {
 	for _, in := range doc.InlinesOf(inlines) {
 		switch v := in.(type) {
 		case *doc.Text:
-			if strings.TrimSpace(v.Text) != "" || strings.Contains(v.Text, " ") {
+			if strings.TrimSpace(v.Text) != "" || strings.Contains(v.Text, "\u00A0") {
 				return true
 			}
 		case *doc.Equation:
@@ -587,7 +587,7 @@ func (w *xhtmlWriter) inlines(inlines []doc.Inline, heading bool) string {
 		case *doc.LineBreak:
 			sb.WriteString("<br/>")
 		case *doc.Tab:
-			sb.WriteString(" ")
+			sb.WriteString("\u2003")
 		case *doc.Bookmark:
 			if id := w.id(v.Name); id != "" {
 				sb.WriteString(`<a id="` + id + `"></a>`)

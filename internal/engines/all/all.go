@@ -4,6 +4,7 @@ package all
 
 import (
 	"github.com/dseif0x/filee-go/internal/convert"
+	"github.com/dseif0x/filee-go/internal/engines/archive"
 	"github.com/dseif0x/filee-go/internal/engines/data"
 	"github.com/dseif0x/filee-go/internal/engines/docxwriter"
 	"github.com/dseif0x/filee-go/internal/engines/fonts"
@@ -47,6 +48,8 @@ func Converters() []convert.Converter {
 		docxwriter.New(),
 		pandoc.New(),
 		libreoffice.New(),
+		// Archives
+		archive.New(),
 	}
 }
 

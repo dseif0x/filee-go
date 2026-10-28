@@ -82,7 +82,7 @@ func qname(n xml.Name, p map[string]string, attr bool) string {
 
 func write(sb *strings.Builder, n *Node, p map[string]string, extra []string, root bool) {
 	if n.IsText() {
-		xml.EscapeText(sb, []byte(n.Text))
+		sb.WriteString(textEscaper.Replace(n.Text))
 		return
 	}
 	name := qname(n.Name, p, false)
@@ -144,3 +144,5 @@ func attrEscape(s string) string {
 	}
 	return sb.String()
 }
+
+var textEscaper = strings.NewReplacer("&", "&amp;", "<", "&lt;", ">", "&gt;", "\r", "&#xD;")

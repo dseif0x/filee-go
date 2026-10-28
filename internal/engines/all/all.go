@@ -7,8 +7,8 @@ import (
 	"github.com/dseif0x/filee-go/internal/engines/docxwriter"
 	"github.com/dseif0x/filee-go/internal/engines/libreoffice"
 	"github.com/dseif0x/filee-go/internal/engines/markdown"
-	"github.com/dseif0x/filee-go/internal/engines/office"
 	_ "github.com/dseif0x/filee-go/internal/engines/ofd" // the OFD document reader
+	"github.com/dseif0x/filee-go/internal/engines/office"
 	"github.com/dseif0x/filee-go/internal/engines/pandoc"
 	"github.com/dseif0x/filee-go/internal/engines/spreadsheet"
 )

@@ -336,3 +336,31 @@ func (n *Node) Add(child *Node) {
 
 // NewElement returns an element.
 func NewElement(space, local string) *Node { return &Node{Name: xml.Name{Space: space, Local: local}} }
+
+// Index is the position of child among n's children, or -1.
+func (n *Node) Index(child *Node) int {
+	for i, c := range n.Children {
+		if c == child {
+			return i
+		}
+	}
+	return -1
+}
+
+// Insert puts child at position i of n's children.
+func (n *Node) Insert(i int, child *Node) {
+	child.Parent = n
+	i = max(0, min(i, len(n.Children)))
+	n.Children = append(n.Children, nil)
+	copy(n.Children[i+1:], n.Children[i:])
+	n.Children[i] = child
+}
+
+// AddBefore inserts sibling right before n.
+func (n *Node) AddBefore(sibling *Node) { n.Parent.Insert(n.Parent.Index(n), sibling) }
+
+// AddAfter inserts sibling right after n.
+func (n *Node) AddAfter(sibling *Node) { n.Parent.Insert(n.Parent.Index(n)+1, sibling) }
+
+// SetText replaces the children with one text node.
+func (n *Node) SetText(t string) { n.Children = []*Node{{Parent: n, Text: t}} }

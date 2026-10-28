@@ -8,6 +8,8 @@ import (
 	"github.com/dseif0x/filee-go/internal/engines/docxwriter"
 	"github.com/dseif0x/filee-go/internal/engines/fonts"
 	"github.com/dseif0x/filee-go/internal/engines/ghostscript"
+	"github.com/dseif0x/filee-go/internal/engines/icns"
+	"github.com/dseif0x/filee-go/internal/engines/images"
 	"github.com/dseif0x/filee-go/internal/engines/libreoffice"
 	"github.com/dseif0x/filee-go/internal/engines/markdown"
 	"github.com/dseif0x/filee-go/internal/engines/media"
@@ -18,6 +20,7 @@ import (
 	"github.com/dseif0x/filee-go/internal/engines/pdf"
 	"github.com/dseif0x/filee-go/internal/engines/spreadsheet"
 	"github.com/dseif0x/filee-go/internal/engines/subtitles"
+	"github.com/dseif0x/filee-go/internal/engines/wic"
 )
 
 // Converters returns a fresh instance of every engine.
@@ -47,6 +50,9 @@ func Converters() []convert.Converter {
 		docxwriter.New(),
 		pandoc.New(),
 		libreoffice.New(),
+		images.New(),
+		icns.New(),
+		wic.New(),
 	}
 }
 

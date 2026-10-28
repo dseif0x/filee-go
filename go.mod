@@ -13,10 +13,14 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/klauspost/compress v1.20.3
 	github.com/klippa-app/go-pdfium v1.21.4
+	github.com/mrjoshuak/go-jpeg2000 v1.5.12
+	github.com/mrjoshuak/go-openexr v1.4.38
+	github.com/ncruces/rethinkraw v0.10.7
 	github.com/pdfcpu/pdfcpu v0.16.4
 	github.com/pelletier/go-toml/v2 v2.4.3
 	github.com/tetratelabs/wazero v1.12.0
 	github.com/ulikunitz/xz v0.5.17
+	github.com/woozymasta/bcn v0.7.0
 	github.com/xuri/excelize/v2 v2.11.0
 	github.com/yuin/goldmark v1.8.6
 	go.yaml.in/yaml/v3 v3.0.5
@@ -30,6 +34,7 @@ require (
 	github.com/hhrutter/tiff v1.0.7 // indirect
 	github.com/jolestar/go-commons-pool/v2 v2.1.2 // indirect
 	github.com/mattn/go-runewidth v0.0.31 // indirect
+	github.com/ncruces/go-image v0.1.0 // indirect
 	github.com/richardlehane/mscfb v1.0.7 // indirect
 	github.com/richardlehane/msoleps v1.0.6 // indirect
 	github.com/tiendc/go-deepcopy v1.7.2 // indirect
@@ -38,4 +43,5 @@ require (
 	github.com/xuri/nfp v0.0.2-0.20250530014748-2ddeb826f9a9 // indirect
 	golang.org/x/crypto v0.58.0 // indirect
 	golang.org/x/net v0.60.0 // indirect
+	golang.org/x/sync v0.24.0 // indirect
 )

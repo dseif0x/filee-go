@@ -270,7 +270,7 @@ func fitsHeader(r io.ReaderAt, pos int64, primary bool) (map[string]string, int6
 	return nil, 0, errors.New("this FITS file is damaged (its header has no END)")
 }
 
-// fitsValue is a card's value: a string between quotes ('' is a quote), else the text before the comment.
+// fitsValue is a card's value: a string between quotes (” is a quote), else the text before the comment.
 func fitsValue(field string) string {
 	text := strings.TrimLeft(field, " ")
 	if !strings.HasPrefix(text, "'") {

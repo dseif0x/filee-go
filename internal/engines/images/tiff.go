@@ -179,7 +179,7 @@ const (
 type tiffPage struct {
 	w, h, samples int
 	kind          tiffKind
-	alpha         bool // the last sample is unassociated alpha
+	alpha         bool                    // the last sample is unassociated alpha
 	row           func(y int, dst []byte) // little-endian samples of row y
 	compression   string                  // "None", "Lzw", "Zip"
 	dpiX, dpiY    float64
@@ -486,4 +486,3 @@ func (z *lzwEncoder) encode(data []byte) []byte {
 	}
 	return out.Bytes()
 }
-

@@ -364,10 +364,10 @@ func bgEnclosed(raw []byte, width, height int, wall float32) []bool {
 // bgBackdrop is the backdrop colour at each pixel: the border colour,
 // corrected block by block for uneven lighting when the backdrop is light.
 type bgBackdrop struct {
-	border              rgbF
-	grid                []rgbF
-	block, cols, rows   int
-	darkest             float32
+	border            rgbF
+	grid              []rgbF
+	block, cols, rows int
+	darkest           float32
 }
 
 const bgBlocks = 48

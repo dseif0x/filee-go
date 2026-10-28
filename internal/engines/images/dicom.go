@@ -50,10 +50,10 @@ type dcmElement struct {
 }
 
 type dcmReader struct {
-	b           []byte
-	p           int
-	explicit    bool
-	order       binary.ByteOrder
+	b        []byte
+	p        int
+	explicit bool
+	order    binary.ByteOrder
 }
 
 func (r *dcmReader) u16(at int) (uint16, error) {

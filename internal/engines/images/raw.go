@@ -103,7 +103,7 @@ func rawPreview(data []byte) *Picture {
 		start := i + j
 		end := jpegEnd(data, start)
 		if end > start {
-			if cfg, err := jpeg.DecodeConfig(bytes.NewReader(data[start:end])); err == nil && cfg.Width >= 64 && cfg.Height >= 64 {
+			if cfg, err := jpeg.DecodeConfig(bytes.NewReader(data[start:end])); err == nil && cfg.Width >= 16 && cfg.Height >= 16 {
 				cands = append(cands, candidate{start, end, cfg.Width * cfg.Height})
 			}
 			i = end

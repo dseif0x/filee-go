@@ -1,0 +1,57 @@
+package hwpx
+
+// Unicode text by symbol font (name without spaces) and code (20–FF); a space in a row skips a code.
+var symbolTables = map[string]map[int]string{
+	"wingdings": symbolTable(
+		symbolRow{0x21, "✏✂✁"},
+		symbolRow{0x28, "☎✆✉✉"},
+		symbolRow{0x36, "⌛⌨"},
+		symbolRow{0x3E, "✇✍ ✌"},
+		symbolRow{0x45, "☜☞☝☟ ☺ ☹ ☠⚐ ✈☼ ❄ ✞ ✠✡☪☯ ☸♈♉♊♋♌♍♎♏♐♑♒♓"},
+		symbolRow{0x6C, "●❍■□□❑❒⬧⧫◆❖⬥⌧ ⌘"},
+		symbolRow{0x7D, "❝❞"},
+		symbolRow{0x80, "⓪①②③④⑤⑥⑦⑧⑨⑩⓿❶❷❸❹❺❻❼❽❾❿"},
+		symbolRow{0x9E, "·•▪○○ ◉◎ ▪☐ ✦★✶✴✹✵ ⌖⟡⌑ ✪✰"},
+		symbolRow{0xD5, "⌫⌦ ➢"},
+		symbolRow{0xDC, "➲"},
+		symbolRow{0xDF, "←→↑↓↖↗↙↘⬅➡⬆⬇⬉⬈⬋⬊⇦⇨⇧⇩⬄⇳⬁⬀⬃⬂"},
+		symbolRow{0xFB, "✗✓☒☑"},
+	),
+	"wingdings2": symbolTable(
+		symbolRow{0x25, "✄✂☏"},
+		symbolRow{0x3E, "☜☞☚☛☜☞☚☛☝☟☝☟☝☟☝☟"},
+		symbolRow{0x4F, "✗✓☒☑☒☒⊗⊗⊘⊘&&&&‽‽‽‽"},
+		symbolRow{0x69, "⓪①②③④⑤⑥⑦⑧⑨⑩⓿❶❷❸❹❺❻❼❽❾❿"},
+		symbolRow{0x80, "☉○☽☾ ✝✝"},
+		symbolRow{0x95, "·•●●○○  ⊙◉▪▪■■☐□□□▣▣▣ ⬩⬩⬩◆◇◈◈◈ ⬪⬪⬪⧫◊ ◖◗◓◒"},
+		symbolRow{0xCD, "✕✕✕✖✖✖✖"},
+		symbolRow{0xE7, "✦✦★★✶✶"},
+		symbolRow{0xF2, "✧☆"},
+		symbolRow{0xF6, "✦ ※⁂"},
+	),
+	"wingdings3": symbolTable(
+		symbolRow{0x21, "←→↑↓↖↗↙↘⇤⇥⤒⤓⇱⇲⇞⇟↔↕⇠⇢⇡⇣↯↵↳↰↱"},
+		symbolRow{0x44, "⇆⇅  ⇇⇉⇈⇊"},
+		symbolRow{0x50, "↻↺⎋  ⌥␣  ⇪⇦⇨"},
+		symbolRow{0x66, "←→↑↓↖↗↙↘↔↕▲▼△▽◀▶◁▷◣◢◤◥◂▸▴"},
+		symbolRow{0x80, "▾▴▾◂▸⮜⮞⮝⮟"},
+		symbolRow{0x89, "←→↑↓←→↑↓←→↑↓⬅➡⬆⬇←→↑↓←→↑↓⬅➡⬆⬇←→←→⬅➡"},
+		symbolRow{0xB1, "⬅➡"},
+		symbolRow{0xC5, "⬅➡⬆⬇"},
+		symbolRow{0xD1, "←→↑↓↖↗↙↘←→↑↓↖↗↙↘⬅➡⬆⬇⬉⬈⬋⬊"},
+	),
+	"webdings": symbolTable(
+		symbolRow{0x33, "◀▶▲▼⏪⏩⏮⏭⏸■●"},
+		symbolRow{0x59, "♥"},
+		symbolRow{0x61, "✔ ☐   ■ ⓘ    ●"},
+		symbolRow{0x72, "✖"},
+		symbolRow{0xC9, "☎"},
+		symbolRow{0xEA, "△"},
+		symbolRow{0xF1, "✈"},
+	),
+	"symbol": symbolTable(
+		symbolRow{0x21, "!∀#∃%&∋()∗+,−./0123456789:;<=>?≅ΑΒΧΔΕΦΓΗΙϑΚΛΜΝΟΠΘΡΣΤΥςΩΞΨΖ[∴]⊥_ αβχδεφγηιϕκλμνοπθρστυϖωξψζ{|}∼"},
+		symbolRow{0xA0, "€ϒ′≤⁄∞ƒ♣♦♥♠↔←↑→↓°±″≥×∝∂•÷≠≡≈…  ↵ℵℑℜ℘⊗⊕∅∩∪⊃⊇⊄⊂⊆∈∉∠∇®©™∏√⋅¬∧∨⇔⇐⇑⇒⇓◊⟨®©™∑"},
+		symbolRow{0xF1, "⟩∫"},
+	),
+}

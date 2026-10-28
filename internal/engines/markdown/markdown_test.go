@@ -121,3 +121,19 @@ func TestConvert(t *testing.T) {
 		t.Errorf("txt %q", txt)
 	}
 }
+
+func TestPictures(t *testing.T) {
+	dir := t.TempDir()
+	src := filepath.Join(dir, "a.png")
+	os.WriteFile(src, []byte("\x89PNG"), 0o644)
+	out := filepath.Join(dir, "out", "report.md")
+	os.MkdirAll(filepath.Dir(out), 0o755)
+	p := NewPictures(out, testutil.Step(t, out, "pdf", "md").Output)
+	l := p.Add(src)
+	if l != "report_files/img0001.png" || p.Add(src) != l {
+		t.Fatalf("link %q", l)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "out", "report_files", "img0001.png")); err != nil {
+		t.Fatal(err)
+	}
+}

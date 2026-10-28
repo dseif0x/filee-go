@@ -23,6 +23,7 @@ import (
 	_ "image/jpeg"
 
 	"github.com/dseif0x/filee-go/internal/convert"
+	"github.com/dseif0x/filee-go/internal/engines/images"
 	"github.com/dseif0x/filee-go/internal/presets"
 )
 
@@ -821,5 +822,47 @@ func TestBrokenFilesFailWithAClearMessage(t *testing.T) {
 		if msg := fail(t, c.path, c.from, "stl"); !strings.Contains(msg, c.want) {
 			t.Errorf("%s: %q does not say %q", filepath.Base(c.path), msg, c.want)
 		}
+	}
+}
+
+func rotate(src *image.NRGBA, degrees int) *image.NRGBA {
+	w, h := src.Bounds().Dx(), src.Bounds().Dy()
+	dw, dh := w, h
+	if degrees != 180 {
+		dw, dh = h, w
+	}
+	dst := image.NewNRGBA(image.Rect(0, 0, dw, dh))
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			var dx, dy int
+			switch degrees {
+			case 90: // clockwise
+				dx, dy = h-1-y, x
+			case 270:
+				dx, dy = y, w-1-x
+			default:
+				dx, dy = w-1-x, h-1-y
+			}
+			copy(dst.Pix[dst.PixOffset(dx, dy):dst.PixOffset(dx, dy)+4], src.Pix[src.PixOffset(x, y):src.PixOffset(x, y)+4])
+		}
+	}
+	return dst
+}
+
+// The preview is written by the image engine: every format it writes, LZW TIFF included.
+func TestPreviewInEveryImageFormat(t *testing.T) {
+	source := save(t, fanModel(), t.TempDir(), "fan", "stl")
+	for _, to := range []string{"webp", "avif", "ico", "qoi"} {
+		out := run(t, source, "stl", to)
+		if pic, err := images.Decode(out[0], to, nil); err != nil || len(pic.Frames) == 0 {
+			t.Errorf("%s: %v", to, err)
+		}
+	}
+	out, err := convertFile(t, source, "stl", "tiff", func(p *presets.Preset) { p.Image.TiffCompression = presets.TiffLzw })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if data, _ := os.ReadFile(out[0]); len(data) < 8 {
+		t.Fatal("no TIFF")
 	}
 }

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/dseif0x/filee-go/internal/engines/images"
 	"github.com/dseif0x/filee-go/internal/presets"
 )
 
@@ -25,7 +26,7 @@ func decodeFile(t *testing.T, path string) image.Image {
 
 func TestPdfiumPagesToPictures(t *testing.T) {
 	src := threePages(t)
-	for _, to := range imageTargets {
+	for _, to := range []string{"png", "jpg", "webp", "tiff", "bmp", "gif", "avif", "ppm", "tga", "psd", "qoi", "jxl", "ico"} {
 		step := newStep(t, src, "pdf", to, func(p *presets.Preset) { p.Pdf.RenderDpi = 72; p.Pdf.PageRange = "1,3" })
 		out, err := Pdfium{}.Convert(context.Background(), step, nil)
 		if err != nil {
@@ -38,10 +39,14 @@ func TestPdfiumPagesToPictures(t *testing.T) {
 		if len(out) != want {
 			t.Fatalf("%s: %v", to, out)
 		}
-		if to == "ppm" || to == "tga" {
-			continue
+		pic, err := images.Decode(out[0], to, nil)
+		if err != nil {
+			t.Fatalf("%s: %v", to, err)
 		}
-		img := decodeFile(t, out[0])
+		if to == "ico" || to == "gif" {
+			continue // icons are at most 256 × 256; a GIF's frames share the largest page's screen
+		}
+		img := pic.Frames[0].Img
 		if b := img.Bounds(); b.Dx() != 595 || b.Dy() != 842 {
 			t.Fatalf("%s: %v", to, b)
 		}
@@ -51,10 +56,9 @@ func TestPdfiumPagesToPictures(t *testing.T) {
 	}
 	tiffOut := newStep(t, src, "pdf", "tiff", func(p *presets.Preset) { p.Pdf.RenderDpi = 72 })
 	out, _ := Pdfium{}.Convert(context.Background(), tiffOut, nil)
-	data, _ := os.ReadFile(out[0])
-	pages, err := readTiffPages(data)
-	if err != nil || len(pages) != 3 || pages[2].Image.Bounds().Dx() != 842 {
-		t.Fatalf("multi-page TIFF: %d pages, %v", len(pages), err)
+	pic, err := images.Decode(out[0], "tiff", nil)
+	if err != nil || len(pic.Frames) != 3 || pic.Frames[2].Width() != 842 {
+		t.Fatalf("multi-page TIFF: %v", err)
 	}
 }
 

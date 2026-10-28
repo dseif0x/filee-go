@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/dseif0x/filee-go/internal/engines/images"
 	"github.com/dseif0x/filee-go/internal/presets"
 	"github.com/dseif0x/filee-go/internal/tools"
 )
@@ -167,5 +168,22 @@ func TestCompressWithGhostscript(t *testing.T) {
 	}
 	if data, _ := os.ReadFile(out[0]); string(data) != "%PDF-1.4 gs" {
 		t.Fatalf("Ghostscript's smaller PDF should win: %q", data[:min(len(data), 40)])
+	}
+}
+
+// Any picture the image engine reads goes into a PDF (C# ImageEncoder.Sources → pdf).
+func TestImageEngineSourcesToPdf(t *testing.T) {
+	for _, from := range []string{"qoi", "psd", "tga"} {
+		src := filepath.Join(t.TempDir(), "in."+from)
+		if err := images.Encode(src, solid(200, 100, color.NRGBA{0, 0, 255, 255}), from, nil); err != nil {
+			t.Fatal(err)
+		}
+		out, err := PdfSharp{}.Convert(context.Background(), newStep(t, src, from, "pdf", nil), nil)
+		if err != nil || len(out) != 1 {
+			t.Fatal(from, out, err)
+		}
+		if s := pdfInfo(t, out[0]); len(s) != 1 || !near(s[0][0], 150, 0.5) {
+			t.Fatal(from, s)
+		}
 	}
 }

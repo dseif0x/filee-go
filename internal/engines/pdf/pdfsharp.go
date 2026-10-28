@@ -8,11 +8,13 @@ package pdf
 import (
 	"context"
 	"fmt"
+	"image"
 	"os"
 	"path/filepath"
 
 	"github.com/dseif0x/filee-go/internal/convert"
 	"github.com/dseif0x/filee-go/internal/engines/ghostscript"
+	"github.com/dseif0x/filee-go/internal/engines/images"
 	"github.com/dseif0x/filee-go/internal/presets"
 )
 
@@ -35,7 +37,8 @@ func (PdfSharp) Name() string        { return "PDF tools (pdfcpu)" }
 func (PdfSharp) MaxParallelism() int { return 0 }
 
 func (PdfSharp) Edges() []convert.Edge {
-	edges := convert.Fan(imageSources, []string{"pdf"}, 10)
+	// Every picture the image engine reads (C# ImageEncoder.Sources → pdf).
+	edges := convert.Fan(images.Sources(), []string{"pdf"}, 10)
 	return append(edges, convert.E("pdf", "pdf"))
 }
 
@@ -65,12 +68,15 @@ func (PdfSharp) Convert(ctx context.Context, step *convert.Step, progress conver
 	return compressPdf(ctx, step, progress)
 }
 
-// imageToPdf places every page of a picture (TIFF pages, …) on its own PDF page.
+// imageToPdf places every page of a picture (TIFF pages, …) on its own PDF
+// page. The image engine reads it and applies the picture options ("pdf" as
+// the target: no format-specific encoding).
 func imageToPdf(ctx context.Context, step *convert.Step, progress convert.Progress) ([]string, error) {
-	frames, err := readPictures(step.InputPath, step.From)
+	pic, err := images.Decode(step.InputPath, step.From, step.Preset)
 	if err != nil {
 		return nil, err
 	}
+	frames := images.SelectFrames(pic, step.From, "pdf")
 	path := step.Output.Allocate("pdf", "")
 	if path == "" {
 		return nil, nil
@@ -87,19 +93,19 @@ func imageToPdf(ctx context.Context, step *convert.Step, progress convert.Progre
 			m.Abort()
 			return nil, err
 		}
-		dpi := frame.Dpi
+		dpi := frame.Meta.DpiX
 		if dpi <= 0 {
 			dpi = 96
 		}
-		img := frame.Image
-		jpegData := frame.Jpeg
-		if edits {
-			// "pdf" as target: turn / resize / grayscale, no format-specific encoding.
-			img = applyOptions(img, opts, "pdf")
-			jpegData = nil
-			if step.From == "jpg" && !hasAlpha(img) {
-				jpegData = encodeJpegBytes(img, max(opts.Quality, 85))
-			}
+		// An upright JPEG left as it is goes into the PDF as it is.
+		var jpegData []byte
+		if step.From == "jpg" && len(frames) == 1 && !edits && frame.Meta.Orientation <= 1 {
+			jpegData, _ = os.ReadFile(step.InputPath)
+		}
+		images.ApplyOptions(frame, opts, "pdf")
+		var img image.Image = frame.Img
+		if jpegData == nil && step.From == "jpg" && !frame.Alpha {
+			jpegData = encodeJpegBytes(img, max(opts.Quality, 85))
 		}
 		b := img.Bounds()
 		imageW := float64(b.Dx()) / dpi * pointsPerInch

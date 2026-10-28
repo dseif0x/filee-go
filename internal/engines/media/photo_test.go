@@ -335,14 +335,6 @@ func TestExifPieces(t *testing.T) {
 		t.Error("exif not replaced")
 	}
 	img := image.NewRGBA(image.Rect(0, 0, 3, 2))
-	img.Set(0, 0, color.RGBA{255, 0, 0, 255})
-	r := orient(img, 6)
-	if r.Bounds().Dx() != 2 || r.Bounds().Dy() != 3 {
-		t.Fatal(r.Bounds())
-	}
-	if c := color.RGBAModel.Convert(r.At(1, 0)).(color.RGBA); c.R != 255 {
-		t.Error("orientation 6 turns right", c)
-	}
 	var pb bytes.Buffer
 	png.Encode(&pb, img)
 	if PngIcc(pb.Bytes()) != nil {

@@ -1,8 +1,8 @@
 // Package heic writes HEIC files: the image engine (package images) reads the
 // picture and applies the preset, FFmpeg's x265 encodes it as HEVC tiles (there
 // is no HEVC encoder in pure Go) and Filee's own HEIF writer puts them into
-// the container with the colour profile and Exif. The FFmpeg engine calls
-// Convert for its edges to HEIC; Encode serves other writers (live photos).
+// the container with the colour profile and Exif. The FFmpeg engine (package
+// media) calls Convert for its edges to HEIC and Encode for Live Photos.
 package heic
 
 import (
@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/dseif0x/filee-go/internal/convert"
 	"github.com/dseif0x/filee-go/internal/engines/images"
@@ -45,7 +46,10 @@ func Convert(ctx context.Context, ffmpeg string, step *convert.Step, progress co
 	var written []string
 	for i, p := range pics {
 		share := 0.85 / float64(len(pics))
+		start := 0.15 + float64(i)*share
+		est := tools.StartEstimate(progress, 5*time.Second, start, start+share*0.95)
 		heif, err := Encode(ctx, ffmpeg, p.png, p.width, p.height, p.icc, p.exif, step.Preset.Image.Quality, step.WorkDir)
+		est.Stop()
 		if err != nil {
 			return written, err
 		}

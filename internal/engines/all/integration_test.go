@@ -19,6 +19,9 @@ func TestCrossEngineRoutes(t *testing.T) {
 		{"pdf", "hwpx", []string{"hwpx-writer"}, 16},
 		{"pdf", "md", []string{"pdf-text"}, 16},
 		{"pdf", "txt", []string{"pdf-text"}, 10},
+		// HEIC: the image engine's reader, FFmpeg's x265 (C# ImageEncoder.Sources → heic).
+		{"psd", "heic", []string{"ffmpeg"}, 10},
+		{"jxl", "heic", []string{"ffmpeg"}, 10},
 	} {
 		r := p.Plan(c.from, c.to, convert.Options{})
 		if r == nil || len(r.Steps) != len(c.engines) {

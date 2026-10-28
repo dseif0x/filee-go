@@ -12,8 +12,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"image"
-	"image/png"
 	"os"
 	"path/filepath"
 	"sort"
@@ -24,8 +22,8 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 
 	"github.com/dseif0x/filee-go/internal/convert"
+	"github.com/dseif0x/filee-go/internal/engines/images"
 	"github.com/dseif0x/filee-go/internal/engines/install"
-	"github.com/dseif0x/filee-go/internal/engines/media"
 	"github.com/dseif0x/filee-go/internal/presets"
 	"github.com/dseif0x/filee-go/internal/tools"
 )
@@ -256,47 +254,27 @@ func toPng(ctx context.Context, gs string, step *convert.Step, progress convert.
 	if len(files) == 0 {
 		return nil, errors.New("Ghostscript wrote no PNG file.")
 	}
+	// The image engine applies the picture options and writes, as ImageMagick did in the original.
 	var written []string
 	for i, f := range files {
 		suffix := ""
 		if len(files) > 1 {
 			suffix = fmt.Sprintf("_p%d", i+1)
 		}
-		p := step.Output.Allocate("png", suffix)
-		if p == "" {
-			continue
+		pic, err := images.Decode(f.path, "png", step.Preset)
+		if err != nil {
+			return written, err
 		}
-		if err := editPng(f.path, p, &step.Preset.Image); err != nil {
-			return nil, err
+		frame := pic.Frames[0]
+		images.ApplyOptions(frame, &step.Preset.Image, "png")
+		out := convert.AllocatorFunc(func(ext, _ string) string { return step.Output.Allocate(ext, suffix) })
+		paths, err := images.Write([]*images.Frame{frame}, "png", out, &step.Preset.Image, step.InputPath, false, 0)
+		if err != nil {
+			return written, err
 		}
-		written = append(written, p)
+		written = append(written, paths...)
 	}
 	return written, nil
-}
-
-func editPng(from, to string, o *presets.ImageOptions) error {
-	if !o.EditsPicture() && !o.TurnsOrMirrors() {
-		return move(from, to)
-	}
-	f, err := os.Open(from)
-	if err != nil {
-		return err
-	}
-	img, err := png.Decode(f)
-	f.Close()
-	if err != nil {
-		return err
-	}
-	var edited image.Image = media.EditPicture(img, o)
-	out, err := os.Create(to)
-	if err != nil {
-		return err
-	}
-	if err := png.Encode(out, edited); err != nil {
-		out.Close()
-		return err
-	}
-	return out.Close()
 }
 
 type numberedFile struct {

@@ -22,6 +22,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/dseif0x/filee-go/internal/convert"
+	"github.com/dseif0x/filee-go/internal/engines/heic"
 	"github.com/dseif0x/filee-go/internal/presets"
 )
 
@@ -277,7 +278,7 @@ func (c *Converter) livePhoto(ctx context.Context, ffmpeg, ffprobe string, step 
 			if err != nil {
 				return nil, err
 			}
-			data, err = EncodeHeic(ctx, ffmpeg, pngPath, w, h, nil, exif, quality, step.WorkDir)
+			data, err = heic.Encode(ctx, ffmpeg, pngPath, w, h, nil, exif, quality, step.WorkDir)
 			if err != nil {
 				return nil, err
 			}

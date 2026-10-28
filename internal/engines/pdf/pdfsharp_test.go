@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/dseif0x/filee-go/internal/presets"
+	"github.com/dseif0x/filee-go/internal/tools"
 )
 
 func threePages(t *testing.T) string {
@@ -154,6 +155,8 @@ func TestCompressWithGhostscript(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Setenv("FILEE_GHOSTSCRIPT", gs)
+	tools.Forget()
+	t.Cleanup(tools.Forget)
 	step := newStep(t, threePages(t), "pdf", "pdf", func(p *presets.Preset) {
 		p.Pdf.Compression = presets.PdfCompressEbook
 		p.Pdf.CompressWithGhostscript = true

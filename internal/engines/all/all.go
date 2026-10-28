@@ -5,11 +5,18 @@ package all
 import (
 	"github.com/dseif0x/filee-go/internal/convert"
 	"github.com/dseif0x/filee-go/internal/engines/data"
+	"github.com/dseif0x/filee-go/internal/engines/docxwriter"
 	"github.com/dseif0x/filee-go/internal/engines/fonts"
 	"github.com/dseif0x/filee-go/internal/engines/ghostscript"
+	"github.com/dseif0x/filee-go/internal/engines/libreoffice"
+	"github.com/dseif0x/filee-go/internal/engines/markdown"
 	"github.com/dseif0x/filee-go/internal/engines/media"
 	"github.com/dseif0x/filee-go/internal/engines/ocr"
+	_ "github.com/dseif0x/filee-go/internal/engines/ofd" // the OFD document reader
+	"github.com/dseif0x/filee-go/internal/engines/office"
+	"github.com/dseif0x/filee-go/internal/engines/pandoc"
 	"github.com/dseif0x/filee-go/internal/engines/pdf"
+	"github.com/dseif0x/filee-go/internal/engines/spreadsheet"
 	"github.com/dseif0x/filee-go/internal/engines/subtitles"
 )
 
@@ -33,6 +40,13 @@ func Converters() []convert.Converter {
 		pdf.PdfText{},
 		pdf.PdfSlides{},
 		pdf.PdfTables{},
+		// office
+		markdown.New(),
+		spreadsheet.New(),
+		office.New(),
+		docxwriter.New(),
+		pandoc.New(),
+		libreoffice.New(),
 	}
 }
 

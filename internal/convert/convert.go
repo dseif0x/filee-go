@@ -15,7 +15,8 @@ import (
 // Edge is one direct conversion an engine offers.
 type Edge struct {
 	From, To string
-	// Cost weighs the edge in route planning (default 10 when 0).
+	// Cost weighs the edge in route planning (default 10 when 0; Free for a
+	// real cost of 0).
 	Cost int
 	// ImageSourcesOnly edges are used only when the file itself is a raster
 	// image (tracing); NotForImageSources the reverse.
@@ -53,12 +54,21 @@ func Fan(from, to []string, cost int) []Edge {
 	return out
 }
 
+// Free is the Cost of an edge that costs nothing (0 means the default 10).
+const Free = -1
+
 func (e Edge) cost() int {
-	if e.Cost == 0 {
+	switch {
+	case e.Cost == 0:
 		return 10
+	case e.Cost < 0:
+		return 0
 	}
 	return e.Cost
 }
+
+// EffectiveCost is the cost the planner uses for the edge.
+func (e Edge) EffectiveCost() int { return e.cost() }
 
 // Status tells whether an engine can run here.
 type Status struct {

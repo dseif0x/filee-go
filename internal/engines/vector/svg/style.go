@@ -133,6 +133,22 @@ func computeStyle(n *Node, parent *style, lc lengthContext) *style {
 	s.maskType = gfx.MaskLuminance
 	s.transformCSS = ""
 	s.blend, s.isolate = gfx.BlendNormal, false
+	// "inherit" on a property that is not inherited takes the parent's value.
+	inheritNon := func(prop string, apply func()) {
+		if v, ok := spec(n, prop); ok && strings.TrimSpace(v) == "inherit" {
+			apply()
+		}
+	}
+	inheritNon("flood-color", func() { s.floodColor = parent.floodColor })
+	inheritNon("flood-opacity", func() { s.floodOpacity = parent.floodOpacity })
+	inheritNon("stop-color", func() { s.stopColor = parent.stopColor })
+	inheritNon("stop-opacity", func() { s.stopOpacity = parent.stopOpacity })
+	inheritNon("lighting-color", func() { s.lightingColor = parent.lightingColor })
+	inheritNon("opacity", func() { s.opacity = parent.opacity })
+	inheritNon("clip-path", func() { s.clipPath = parent.clipPath })
+	inheritNon("mask", func() { s.mask = parent.mask })
+	inheritNon("filter", func() { s.filter = parent.filter })
+	inheritNon("overflow", func() { s.overflowVisible = parent.overflowVisible })
 	if n.Name == "svg" || n.Name == "symbol" || n.Name == "marker" || n.Name == "pattern" {
 		s.overflowVisible = false
 	}
@@ -277,7 +293,9 @@ func computeStyle(n *Node, parent *style, lc lengthContext) *style {
 		s.floodOpacity = parseOpacity(v, 1)
 	}
 	if v, ok := get("lighting-color"); ok {
-		if c, ok := parseColor(v); ok {
+		if strings.EqualFold(v, "currentcolor") {
+			s.lightingColor = s.color
+		} else if c, ok := parseColor(v); ok {
 			s.lightingColor = c
 		}
 	}

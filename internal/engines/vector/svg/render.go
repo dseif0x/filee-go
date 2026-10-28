@@ -141,7 +141,7 @@ func (d *Document) Draw(dev gfx.Device, m gfx.Matrix, opt Options) {
 	}
 	r := &renderer{doc: d, dev: dev, fonts: d.fonts(), active: map[*Node]int{}, rootScale: m.MeanScale(), filterRes: opt.FilterResolution}
 	c := r.rootContext(m)
-	if !c.st.display {
+	if !c.st.display || !conditionsHold(d.root) {
 		return
 	}
 	// Opacity, clipping, masks and filters on the root element apply to the whole drawing.
@@ -816,6 +816,10 @@ func dashed(pls []gfx.Polyline, s *gfx.StrokeStyle) []gfx.Polyline {
 
 // gradientAttr finds an attribute along the href chain.
 func (r *renderer) gradientChain(n *Node) []*Node {
+	same := func(a, b *Node) bool {
+		gradient := func(x *Node) bool { return x.Name == "linearGradient" || x.Name == "radialGradient" }
+		return a.Name == b.Name || gradient(a) && gradient(b)
+	}
 	chain := []*Node{n}
 	seen := map[*Node]bool{n: true}
 	for len(chain) < 32 {
@@ -824,7 +828,8 @@ func (r *renderer) gradientChain(n *Node) []*Node {
 			break
 		}
 		next := r.doc.ids[id]
-		if next == nil || seen[next] {
+		// Only elements of the same kind lend their attributes.
+		if next == nil || seen[next] || !same(n, next) {
 			break
 		}
 		seen[next] = true

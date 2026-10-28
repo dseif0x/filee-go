@@ -43,7 +43,8 @@ func (r *renderer) resolveFilters(v string) ([]*Node, bool) {
 		}
 		f := cssFilterFunction(strings.ToLower(strings.TrimSpace(rest[:open])), strings.TrimSpace(rest[open+1:end]))
 		if f == nil {
-			return nil, false
+			// An invalid value makes the declaration void: no filter at all.
+			return nil, true
 		}
 		out = append(out, f)
 		rest = strings.TrimSpace(rest[end+1:])

@@ -67,8 +67,11 @@ func (d *Document) size() {
 	lc := lengthContext{vw: 100, vh: 100, fontSize: 16}
 	dim := func(attr string, axis int, fromVB float64) float64 {
 		l, ok := parseLength(d.root.Attr(attr))
-		if !ok || l.V <= 0 {
+		if !ok {
 			return fromVB
+		}
+		if l.V <= 0 {
+			return math.NaN() // an explicit zero or negative size: nothing to draw
 		}
 		if l.Unit == "%" {
 			if fromVB > 0 {
@@ -88,6 +91,10 @@ func (d *Document) size() {
 		if _, okH := parseLength(d.root.Attr("height")); okH && !d.root.Has("width") {
 			w = h * vb[2] / vb[3]
 		}
+	}
+	if math.IsNaN(w) || math.IsNaN(h) {
+		d.Width, d.Height = 0, 0
+		return
 	}
 	if w <= 0 || h <= 0 {
 		// No size at all: the extent of what is drawn.
@@ -141,14 +148,15 @@ func (d *Document) Draw(dev gfx.Device, m gfx.Matrix, opt Options) {
 }
 
 type renderer struct {
-	styles    map[*Node]*style
-	doc       *Document
-	dev       gfx.Device
-	fonts     *gfx.Fonts
-	active    map[*Node]int
-	rootScale float64
-	filterRes float64
-	budget    int
+	styles      map[*Node]*style
+	doc         *Document
+	dev         gfx.Device
+	fonts       *gfx.Fonts
+	active      map[*Node]int
+	rootScale   float64
+	filterRes   float64
+	budget      int
+	filterDepth int
 }
 
 type context struct {
@@ -476,11 +484,8 @@ func (r *renderer) drawNestedSVG(n *Node, c context, sizeFrom *Node) {
 }
 
 func (lc lengthContext) resolveAttr(n *Node, attr string, axis int, def float64) float64 {
-	// Geometry properties may come from CSS (SVG 2), which wins over the attribute.
-	v, ok := n.styles[attr]
-	if !ok {
-		v, ok = n.Attrs[attr]
-	}
+	// Geometry comes from attributes only (SVG 1.1), as Svg.Skia reads it.
+	v, ok := n.Attrs[attr]
 	if !ok {
 		return def
 	}
@@ -545,8 +550,9 @@ func (r *renderer) drawUse(n *Node, c context) {
 				sizes.Attrs[a] = v
 			}
 		}
-		sizes.Attrs["x"] = n.Attr("x")
-		sizes.Attrs["y"] = n.Attr("y")
+		sizes.Attrs["x"] = target.Attr("x")
+		sizes.Attrs["y"] = target.Attr("y")
+		cc.m = cc.m.Mul(gfx.Translate(c.lc.resolveAttr(n, "x", axisX, 0), c.lc.resolveAttr(n, "y", axisY, 0)))
 		r.drawNestedSVG(target, cc, sizes)
 		return
 	}
@@ -1098,16 +1104,14 @@ func (r *renderer) pushClipPath(cp *Node, c context, bounds func() gfx.Rect) int
 		m = m.Mul(gfx.Translate(b.X0, b.Y0)).Mul(gfx.Scale(b.Width(), b.Height()))
 		lc = lengthContext{vw: 1, vh: 1, fontSize: c.lc.fontSize}
 	}
-	path := gfx.NewPath()
-	fillRule := gfx.NonZero
-	first := true
+	var shapes []gfx.ClipShape
 	var add func(n *Node, st *style, t gfx.Matrix)
 	add = func(n *Node, st *style, t gfx.Matrix) {
 		s := computeStyle(n, st, lc)
-		if !s.display {
+		if !s.display || !conditionsHold(n) {
 			return
 		}
-		t = t.Mul(r.transformOf(n, s, c.lc))
+		t = t.Mul(r.transformOf(n, s, lc))
 		var geom *gfx.Path
 		switch n.Name {
 		case "use":
@@ -1119,22 +1123,30 @@ func (r *renderer) pushClipPath(cp *Node, c context, bounds func() gfx.Rect) int
 			return
 		case "text":
 			geom = r.textOutline(n, context{m: gfx.Identity, st: s, lc: lc})
-		default:
+		case "rect", "circle", "ellipse", "line", "polyline", "polygon", "path":
 			geom = shapePath(n, lc)
 		}
 		if geom == nil || !s.visible {
 			return
 		}
-		if first {
-			fillRule = s.clipRule
-			first = false
+		// A child whose own clip-path points at an empty clip contributes nothing.
+		if s.clipPath != "" {
+			if id, _, ok := urlRef(s.clipPath); ok {
+				if inner := r.doc.ids[id]; inner == nil || inner.Name != "clipPath" || len(inner.Elements()) == 0 {
+					return
+				}
+			}
 		}
-		path.Append(geom.Transformed(t))
+		shapes = append(shapes, gfx.ClipShape{Path: geom, M: m.Mul(t), Rule: s.clipRule})
 	}
 	for _, ch := range cp.Elements() {
 		add(ch, cst, gfx.Identity)
 	}
-	r.dev.PushClip(path, m, fillRule)
+	if len(shapes) == 0 {
+		r.dev.PushClip(gfx.NewPath(), m, gfx.NonZero)
+		return pushed + 1
+	}
+	r.dev.PushClipShapes(shapes)
 	return pushed + 1
 }
 

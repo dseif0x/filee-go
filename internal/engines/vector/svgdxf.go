@@ -211,10 +211,11 @@ func (c *outlineCollector) Stroke(p *gfx.Path, m gfx.Matrix, s *gfx.StrokeStyle,
 
 // Images, clips, groups and masks have no outline to write.
 func (c *outlineCollector) DrawImage(img image.Image, m gfx.Matrix, opacity float64) {}
-func (c *outlineCollector) PushClip(p *gfx.Path, m gfx.Matrix, rule gfx.FillRule) {}
-func (c *outlineCollector) PopClip()                                             {}
-func (c *outlineCollector) PushGroup(opacity float64)                            {}
-func (c *outlineCollector) PopGroup()                                            {}
-func (c *outlineCollector) PushMask(kind gfx.MaskKind, opacity float64)          {}
-func (c *outlineCollector) BeginMaskContent()                                    {}
-func (c *outlineCollector) PopMask()                                             {}
+func (c *outlineCollector) PushClip(p *gfx.Path, m gfx.Matrix, rule gfx.FillRule)    {}
+func (c *outlineCollector) PushClipShapes(shapes []gfx.ClipShape)                    {}
+func (c *outlineCollector) PopClip()                                                 {}
+func (c *outlineCollector) PushGroup(opacity float64)                                {}
+func (c *outlineCollector) PopGroup()                                                {}
+func (c *outlineCollector) PushMask(kind gfx.MaskKind, opacity float64)              {}
+func (c *outlineCollector) BeginMaskContent()                                        {}
+func (c *outlineCollector) PopMask()                                                 {}

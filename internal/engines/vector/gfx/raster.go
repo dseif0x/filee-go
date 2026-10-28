@@ -416,6 +416,50 @@ func (r *Raster) PushClip(p *Path, m Matrix, rule FillRule) {
 	r.clips = append(r.clips, c)
 }
 
+// PushClipShapes clips to the union of the shapes.
+func (r *Raster) PushClipShapes(shapes []ClipShape) {
+	if len(shapes) == 1 {
+		r.PushClip(shapes[0].Path, shapes[0].M, shapes[0].Rule)
+		return
+	}
+	parent := r.clip()
+	acc := make([]float32, r.W*r.H)
+	b := r.bounds()
+	for _, s := range shapes {
+		if !s.M.Finite() {
+			continue
+		}
+		polys := s.Path.Transformed(s.M).Flatten(r.Tolerance)
+		coverageRows(polys, s.Rule, b.Min.X, b.Min.Y, b.Max.X, b.Max.Y, func(y, x0, x1 int, cov []float32) {
+			for x := x0; x < x1; x++ {
+				// Union of coverages: 1 - (1-a)(1-b).
+				i := y*r.W + x
+				acc[i] = 1 - (1-acc[i])*(1-cov[x-x0])
+			}
+		})
+	}
+	c := &clipMask{pix: make([]uint8, r.W*r.H)}
+	minX, minY, maxX, maxY := r.W, r.H, -1, -1
+	for y := b.Min.Y; y < b.Max.Y; y++ {
+		for x := b.Min.X; x < b.Max.X; x++ {
+			v := acc[y*r.W+x]
+			if parent != nil {
+				v *= float32(parent.pix[y*r.W+x]) / 255
+			}
+			if v <= 0 {
+				continue
+			}
+			c.pix[y*r.W+x] = clamp8(v * 255)
+			minX, maxX = min(minX, x), max(maxX, x)
+			minY, maxY = min(minY, y), max(maxY, y)
+		}
+	}
+	if maxX >= minX {
+		c.bounds = image.Rect(minX, minY, maxX+1, maxY+1)
+	}
+	r.clips = append(r.clips, c)
+}
+
 func (r *Raster) PopClip() {
 	if len(r.clips) > 0 {
 		r.clips = r.clips[:len(r.clips)-1]

@@ -69,7 +69,6 @@ func TestResvgSuite(t *testing.T) {
 			d.Fonts = fonts
 			b := want.Bounds()
 			r := gfx.NewRaster(b.Dx(), b.Dy())
-			r.Clear(gfx.White)
 			d.Draw(r, gfx.Scale(float64(b.Dx())/d.Width, float64(b.Dy())/d.Height), Options{})
 			diff = compare(r.Straight(), want)
 			if dir := os.Getenv("RESVG_SAVE"); dir != "" {
@@ -108,6 +107,10 @@ func compare(got *image.NRGBA, want image.Image) float64 {
 			wg := (g + (0xffff - a)) >> 8
 			wb := (bl + (0xffff - a)) >> 8
 			c := got.NRGBAAt(x, y)
+			ga := int(c.A)
+			c.R = uint8((int(c.R)*ga + 255*(255-ga)) / 255)
+			c.G = uint8((int(c.G)*ga + 255*(255-ga)) / 255)
+			c.B = uint8((int(c.B)*ga + 255*(255-ga)) / 255)
 			d := absDiff(int(c.R), int(wr)) + absDiff(int(c.G), int(wg)) + absDiff(int(c.B), int(wb))
 			if d > 96 {
 				bad++
@@ -129,7 +132,9 @@ func sideBySide(got *image.NRGBA, want image.Image) *image.NRGBA {
 	out := image.NewNRGBA(image.Rect(0, 0, b.Dx()*2+4, b.Dy()))
 	for y := 0; y < b.Dy(); y++ {
 		for x := 0; x < b.Dx(); x++ {
-			out.Set(x, y, got.At(x, y))
+			c := got.NRGBAAt(x, y)
+			ga := int(c.A)
+			out.Set(x, y, color.NRGBA{uint8((int(c.R)*ga + 255*(255-ga)) / 255), uint8((int(c.G)*ga + 255*(255-ga)) / 255), uint8((int(c.B)*ga + 255*(255-ga)) / 255), 255})
 			r, g, bl, a := want.At(b.Min.X+x, b.Min.Y+y).RGBA()
 			out.Set(b.Dx()+4+x, y, color.RGBA64{uint16(r + 0xffff - a), uint16(g + 0xffff - a), uint16(bl + 0xffff - a), 0xffff})
 		}

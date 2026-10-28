@@ -38,10 +38,10 @@ func ReadFile(path string) ([]byte, error) {
 }
 
 type vertex struct {
-	p         gfx.Point
-	in, out   gfx.Point // directions (zero when none)
-	subStart  bool
-	subEnd    bool
+	p        gfx.Point
+	in, out  gfx.Point // directions (zero when none)
+	subStart bool
+	subEnd   bool
 }
 
 // vertices lists the path's vertices with their incoming and outgoing directions.

@@ -12,10 +12,10 @@ type declaration struct {
 }
 
 type cssRule struct {
-	selector    *selector
-	spec        int
-	order       int
-	decls       []declaration
+	selector *selector
+	spec     int
+	order    int
+	decls    []declaration
 }
 
 // selector is a chain of compound selectors joined by combinators, last first.

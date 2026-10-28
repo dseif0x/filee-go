@@ -23,12 +23,12 @@ import "math"
 // Vec is a point or vector in pixels.
 type Vec struct{ X, Y float64 }
 
-func (a Vec) add(b Vec) Vec        { return Vec{a.X + b.X, a.Y + b.Y} }
-func (a Vec) sub(b Vec) Vec        { return Vec{a.X - b.X, a.Y - b.Y} }
-func (a Vec) neg() Vec             { return Vec{-a.X, -a.Y} }
-func (a Vec) mul(s float64) Vec    { return Vec{a.X * s, a.Y * s} }
-func (a Vec) dot(b Vec) float64    { return a.X*b.X + a.Y*b.Y }
-func (a Vec) length() float64      { return math.Sqrt(a.X*a.X + a.Y*a.Y) }
+func (a Vec) add(b Vec) Vec          { return Vec{a.X + b.X, a.Y + b.Y} }
+func (a Vec) sub(b Vec) Vec          { return Vec{a.X - b.X, a.Y - b.Y} }
+func (a Vec) neg() Vec               { return Vec{-a.X, -a.Y} }
+func (a Vec) mul(s float64) Vec      { return Vec{a.X * s, a.Y * s} }
+func (a Vec) dot(b Vec) float64      { return a.X*b.X + a.Y*b.Y }
+func (a Vec) length() float64        { return math.Sqrt(a.X*a.X + a.Y*a.Y) }
 func (a Vec) lengthSquared() float64 { return a.X*a.X + a.Y*a.Y }
 
 func (a Vec) normalized() Vec {
@@ -46,7 +46,7 @@ type Segment struct {
 	End                Vec
 }
 
-func lineSeg(end Vec) Segment         { return Segment{true, end, end, end} }
+func lineSeg(end Vec) Segment          { return Segment{true, end, end, end} }
 func cubicSeg(c1, c2, end Vec) Segment { return Segment{false, c1, c2, end} }
 
 // Path is a closed path starting at Start.
@@ -56,12 +56,12 @@ type Path struct {
 }
 
 const (
-	cornerReach           = 2.0
-	sampleSpacing         = 2.0
+	cornerReach            = 2.0
+	sampleSpacing          = 2.0
 	maxReparameterizations = 4
-	minStretch            = 10.0
-	stretchTolerance      = 0.5
-	stretchBend           = 0.035
+	minStretch             = 10.0
+	stretchTolerance       = 0.5
+	stretchBend            = 0.035
 )
 
 // Fit fits a smooth path to a pixel outline.

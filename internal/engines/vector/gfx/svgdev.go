@@ -197,6 +197,21 @@ func (s *SVGWriter) PushClip(p *Path, m Matrix, rule FillRule) {
 	fmt.Fprintf(s.out(), `<g clip-path="url(#%s)">`+"\n", id)
 }
 
+// PushClipShapes clips to the union of shapes.
+func (s *SVGWriter) PushClipShapes(shapes []ClipShape) {
+	id := s.id("c")
+	fmt.Fprintf(&s.defs, `<clipPath id="%s">`, id)
+	for _, sh := range shapes {
+		r := ""
+		if sh.Rule == EvenOdd {
+			r = ` clip-rule="evenodd"`
+		}
+		fmt.Fprintf(&s.defs, `<path d="%s"%s/>`, svgPathData(sh.Path, sh.M), r)
+	}
+	s.defs.WriteString("</clipPath>")
+	fmt.Fprintf(s.out(), `<g clip-path="url(#%s)">`+"\n", id)
+}
+
 func (s *SVGWriter) PopClip() { s.out().WriteString("</g>\n") }
 
 func (s *SVGWriter) PushGroup(opacity float64) {

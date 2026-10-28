@@ -60,30 +60,32 @@ type fimg struct {
 }
 
 type filterRun struct {
-	r        *renderer
-	src      *image.RGBA
-	srcSub   image.Rectangle
-	results  map[string]*fimg
-	last     *fimg
-	w, h     int
-	m        gfx.Matrix // user space → filter pixels
-	inv      gfx.Matrix
-	sx, sy   float64 // user units → pixels along x and y
-	region   gfx.Rect
-	bbox     gfx.Rect
-	primBB   bool
-	lc       lengthContext
-	c        context
-	linear   bool
-	fillSrc  gfx.Paint
-	strkSrc  gfx.Paint
+	r       *renderer
+	src     *image.RGBA
+	srcSub  image.Rectangle
+	results map[string]*fimg
+	last    *fimg
+	w, h    int
+	m       gfx.Matrix // user space → filter pixels
+	inv     gfx.Matrix
+	sx, sy  float64 // user units → pixels along x and y
+	region  gfx.Rect
+	bbox    gfx.Rect
+	primBB  bool
+	lc      lengthContext
+	c       context
+	linear  bool
+	fillSrc gfx.Paint
+	strkSrc gfx.Paint
 }
 
 func (r *renderer) drawFiltered(n, f *Node, c context, draw func(context)) {
-	if !r.enter(f) {
+	// feImage can draw elements that are filtered again; stop runaway nesting.
+	if r.filterDepth > 8 {
 		return
 	}
-	defer r.leave(f)
+	r.filterDepth++
+	defer func() { r.filterDepth-- }()
 	chain := r.gradientChain(f)
 	var prims *Node
 	for _, cn := range chain {
@@ -370,7 +372,8 @@ func (fr *filterRun) primitive(p *Node, st *style) *fimg {
 			sy = sd[1]
 		}
 		if len(sd) > 2 || sx < 0 || sy < 0 {
-			out = fr.blank()
+			// A negative deviation disables the primitive: the input passes through.
+			out = a.img
 			break
 		}
 		if fr.primBB {

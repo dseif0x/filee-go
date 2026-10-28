@@ -8,16 +8,16 @@ import (
 
 // textChar is one character of a <text> with what positions it.
 type textChar struct {
-	r                  rune
-	st                 *style
-	lc                 lengthContext
-	x, y, rot          *float64
-	dx, dy             float64
-	hasDX, hasDY       bool
-	path               *Node // textPath
-	startOffset        string
-	pathStart          bool // first character of a textPath
-	preserve           bool
+	r            rune
+	st           *style
+	lc           lengthContext
+	x, y, rot    *float64
+	dx, dy       float64
+	hasDX, hasDY bool
+	path         *Node // textPath
+	startOffset  string
+	pathStart    bool // first character of a textPath
+	preserve     bool
 }
 
 // textPiece is laid-out text in one style.
@@ -469,4 +469,3 @@ func (m *pathMeasure) at(d float64) (gfx.Point, float64, bool) {
 	dir := b.Sub(a)
 	return a.Lerp(b, t), math.Atan2(dir.Y, dir.X), true
 }
-

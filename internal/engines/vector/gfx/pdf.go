@@ -515,6 +515,35 @@ func (p *PDFPage) PushClip(path *Path, m Matrix, rule FillRule) {
 	}
 }
 
+// PushClipShapes clips to the union of shapes: one clip path when the rules
+// agree, else a soft mask of the shapes filled white (exact union).
+func (p *PDFPage) PushClipShapes(shapes []ClipShape) {
+	if len(shapes) == 0 {
+		p.PushClip(NewPath(), Identity, NonZero)
+		return
+	}
+	if len(shapes) == 1 {
+		p.PushClip(shapes[0].Path, shapes[0].M, shapes[0].Rule)
+		return
+	}
+	var mb bytes.Buffer
+	mb.WriteString("1 g\n")
+	for _, s := range shapes {
+		if !s.M.Finite() || s.Path.Empty() {
+			continue
+		}
+		writePath(&mb, s.Path, s.M)
+		if s.Rule == EvenOdd {
+			mb.WriteString("f*\n")
+		} else {
+			mb.WriteString("f\n")
+		}
+	}
+	form := p.doc.form(mb.Bytes(), p.w, p.h, true)
+	b := p.out()
+	b.WriteString("q\n/" + p.doc.gstate(fmt.Sprintf("/SMask<</Type/Mask/S/Luminosity/G %d 0 R>>", form)) + " gs\n")
+}
+
 func (p *PDFPage) PopClip() { p.out().WriteString("Q\n") }
 
 func (p *PDFPage) PushGroup(opacity float64) {

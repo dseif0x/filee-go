@@ -9,13 +9,13 @@ import "math"
 // Point is a point or vector.
 type Point struct{ X, Y float64 }
 
-func (p Point) Add(q Point) Point       { return Point{p.X + q.X, p.Y + q.Y} }
-func (p Point) Sub(q Point) Point       { return Point{p.X - q.X, p.Y - q.Y} }
-func (p Point) Mul(k float64) Point     { return Point{p.X * k, p.Y * k} }
-func (p Point) Dot(q Point) float64     { return p.X*q.X + p.Y*q.Y }
-func (p Point) Cross(q Point) float64   { return p.X*q.Y - p.Y*q.X }
-func (p Point) Len() float64            { return math.Hypot(p.X, p.Y) }
-func (p Point) Perp() Point             { return Point{-p.Y, p.X} }
+func (p Point) Add(q Point) Point     { return Point{p.X + q.X, p.Y + q.Y} }
+func (p Point) Sub(q Point) Point     { return Point{p.X - q.X, p.Y - q.Y} }
+func (p Point) Mul(k float64) Point   { return Point{p.X * k, p.Y * k} }
+func (p Point) Dot(q Point) float64   { return p.X*q.X + p.Y*q.Y }
+func (p Point) Cross(q Point) float64 { return p.X*q.Y - p.Y*q.X }
+func (p Point) Len() float64          { return math.Hypot(p.X, p.Y) }
+func (p Point) Perp() Point           { return Point{-p.Y, p.X} }
 func (p Point) Lerp(q Point, t float64) Point {
 	return Point{p.X + (q.X-p.X)*t, p.Y + (q.Y-p.Y)*t}
 }
@@ -110,9 +110,9 @@ type Rect struct {
 // EmptyRect has no area and absorbs the first point added.
 func EmptyRect() Rect { return Rect{math.Inf(1), math.Inf(1), math.Inf(-1), math.Inf(-1)} }
 
-func (r Rect) Empty() bool      { return !(r.X1 >= r.X0 && r.Y1 >= r.Y0) }
-func (r Rect) Width() float64   { return r.X1 - r.X0 }
-func (r Rect) Height() float64  { return r.Y1 - r.Y0 }
+func (r Rect) Empty() bool     { return !(r.X1 >= r.X0 && r.Y1 >= r.Y0) }
+func (r Rect) Width() float64  { return r.X1 - r.X0 }
+func (r Rect) Height() float64 { return r.Y1 - r.Y0 }
 func (r *Rect) Add(p Point) {
 	if math.IsNaN(p.X) || math.IsNaN(p.Y) || math.IsInf(p.X, 0) || math.IsInf(p.Y, 0) {
 		return

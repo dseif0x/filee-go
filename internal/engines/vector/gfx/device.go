@@ -94,6 +94,13 @@ func (p Paint) Visible() bool {
 	return p.Color.A > 0
 }
 
+// ClipShape is one shape of a clip union.
+type ClipShape struct {
+	Path *Path
+	M    Matrix
+	Rule FillRule
+}
+
 // MaskKind is how a mask's drawing becomes coverage.
 type MaskKind uint8
 
@@ -110,6 +117,9 @@ type Device interface {
 	// DrawImage draws img with its pixel rectangle (0,0)–(w,h) mapped by m.
 	DrawImage(img image.Image, m Matrix, opacity float64)
 	PushClip(p *Path, m Matrix, rule FillRule)
+	// PushClipShapes clips to the union of shapes, each with its own rule;
+	// PopClip ends it.
+	PushClipShapes(shapes []ClipShape)
 	PopClip()
 	// PushGroup starts an isolated group composited with opacity on PopGroup.
 	PushGroup(opacity float64)

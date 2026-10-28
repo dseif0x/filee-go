@@ -15,11 +15,8 @@ import (
 
 	_ "image/gif"
 
-	_ "golang.org/x/image/bmp"
-	_ "golang.org/x/image/tiff"
-	_ "golang.org/x/image/webp"
-
 	"github.com/dseif0x/filee-go/internal/doc"
+	"github.com/dseif0x/filee-go/internal/engines/images"
 	"github.com/dseif0x/filee-go/internal/formats"
 )
 
@@ -213,12 +210,8 @@ func commonImage(path, folder string, gifAndSvg bool) (file, mediaType string, o
 	if mt == "image/jpeg" || mt == "image/png" || gifAndSvg && (mt == "image/gif" || mt == "image/svg+xml") {
 		return path, mt, true
 	}
-	f, err := os.Open(path)
-	if err != nil {
-		return "", "", false
-	}
-	img, _, err := image.Decode(f)
-	f.Close()
+	// The image engine reads it (WebP, TIFF, AVIF, HEIC, JPEG XL, PSD, …), as ImageMagick did.
+	img, err := images.DecodeImage(path, "")
 	if err != nil {
 		return "", "", false
 	}
@@ -257,17 +250,6 @@ func opaque(img image.Image) bool {
 }
 
 // imageSize is the pixel size of a picture, ok false when it can't be read.
-func imageSize(path string) (int, int, bool) {
-	f, err := os.Open(path)
-	if err != nil {
-		return 0, 0, false
-	}
-	defer f.Close()
-	c, _, err := image.DecodeConfig(f)
-	if err != nil {
-		return 0, 0, false
-	}
-	return c.Width, c.Height, true
-}
+func imageSize(path string) (int, int, bool) { return images.PictureSize(path) }
 
 func esc(s string) string { return doc.EscapeXML(s) }

@@ -8,10 +8,6 @@ package docxwriter
 import (
 	"archive/zip"
 	"fmt"
-	"image"
-	_ "image/gif"
-	_ "image/jpeg"
-	"image/png"
 	"io"
 	"os"
 	"path/filepath"
@@ -19,11 +15,8 @@ import (
 	"strings"
 	"time"
 
-	_ "golang.org/x/image/bmp"
-	_ "golang.org/x/image/tiff"
-	_ "golang.org/x/image/webp"
-
 	"github.com/dseif0x/filee-go/internal/doc"
+	"github.com/dseif0x/filee-go/internal/engines/images"
 )
 
 const (
@@ -240,17 +233,8 @@ func writeMedia(zw *zip.Writer, m media) error {
 		_, err = io.Copy(e, f)
 		return err
 	}
-	// WEBP, TIFF, … → PNG, which every Word version shows.
-	f, err := os.Open(m.source)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	img, _, err := image.Decode(f)
-	if err != nil {
-		return err
-	}
-	return png.Encode(e, img)
+	// WEBP, TIFF, AVIF, … → PNG, which every Word version shows.
+	return images.WritePNG(m.source, e)
 }
 
 func (w *writer) contentTypes(parts []*part) string {

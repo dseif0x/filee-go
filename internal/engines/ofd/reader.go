@@ -769,12 +769,15 @@ func (r *reader) save(b []byte) string {
 			return ""
 		}
 		return name
-	case "tiff":
+	case "tiff", "jp2", "j2k":
 		if name := r.newMediaName("png"); name != "" {
-			return toPNG(b, name)
+			if kind == "j2k" {
+				kind = "jp2" // the JPEG 2000 reader takes both the file and the bare codestream
+			}
+			return toPNG(b, kind, name)
 		}
 	}
-	return "" // JPEG 2000: no pure-Go decoder; the text still converts
+	return "" // a picture Filee cannot decode is left out; the text still converts
 }
 
 func sniff(b []byte) string {

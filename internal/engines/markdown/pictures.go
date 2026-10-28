@@ -2,21 +2,14 @@ package markdown
 
 import (
 	"fmt"
-	"image"
-	_ "image/gif"
-	_ "image/jpeg"
-	"image/png"
 	"io"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 
-	_ "golang.org/x/image/bmp"
-	_ "golang.org/x/image/tiff"
-	_ "golang.org/x/image/webp"
-
 	"github.com/dseif0x/filee-go/internal/convert"
+	"github.com/dseif0x/filee-go/internal/engines/images"
 )
 
 // FolderSuffix names the picture folder of a Markdown file: "report.md" → "report_files".
@@ -81,10 +74,7 @@ func copyPicture(from, to string, toPNG bool) error {
 		return err
 	}
 	if toPNG {
-		img, _, derr := image.Decode(in)
-		if derr == nil {
-			derr = png.Encode(out, img)
-		}
+		derr := images.WritePNG(from, out)
 		out.Close()
 		if derr != nil {
 			os.Remove(to)

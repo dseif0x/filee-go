@@ -12,6 +12,7 @@ import (
 
 	"github.com/dseif0x/filee-go/internal/convert"
 	"github.com/dseif0x/filee-go/internal/doc"
+	"github.com/dseif0x/filee-go/internal/engines/images"
 	_ "github.com/dseif0x/filee-go/internal/engines/markdown"
 	_ "github.com/dseif0x/filee-go/internal/engines/spreadsheet"
 	"github.com/dseif0x/filee-go/internal/testutil"
@@ -102,5 +103,34 @@ func TestSectionsAndHeaders(t *testing.T) {
 	}
 	if !strings.Contains(z["word/header1.xml"], "head") || !strings.Contains(z["word/header1.xml"], " PAGE ") {
 		t.Error("header")
+	}
+}
+
+// Pictures Word can't show (QOI, PSD, …) are read by the image engine and stored as PNG.
+func TestPicturesThroughTheImageEngine(t *testing.T) {
+	dir := t.TempDir()
+	var inlines []doc.Inline
+	for _, f := range []string{"qoi", "psd"} {
+		path := filepath.Join(dir, "p."+f)
+		if err := images.Encode(path, image.NewNRGBA(image.Rect(0, 0, 40, 20)), f, nil); err != nil {
+			t.Fatal(err)
+		}
+		inlines = append(inlines, &doc.Image{Path: path})
+	}
+	s := doc.NewSection()
+	s.Blocks = []doc.Block{&doc.Paragraph{Inlines: inlines}}
+	out := filepath.Join(dir, "p.docx")
+	if err := Write(&doc.Document{Sections: []*doc.Section{s}}, out); err != nil {
+		t.Fatal(err)
+	}
+	z := testutil.ReadZip(t, out)
+	for _, name := range []string{"word/media/image1.png", "word/media/image2.png"} {
+		if cfg, err := png.DecodeConfig(strings.NewReader(z[name])); err != nil || cfg.Width != 40 {
+			t.Errorf("%s: %v", name, err)
+		}
+	}
+	// 40 px at 96 dpi = 381000 EMU.
+	if !strings.Contains(z["word/document.xml"], `cx="381000"`) {
+		t.Error("picture size")
 	}
 }

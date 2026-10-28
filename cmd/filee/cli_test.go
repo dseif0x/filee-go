@@ -124,8 +124,24 @@ func TestListings(t *testing.T) {
 	if _, out, _ := cli(t, "help", "watch"); !strings.Contains(out, "--settle") {
 		t.Fatal(out)
 	}
-	if code, _, _ := cli(t, "app"); code != exitUsage {
-		t.Fatal("the stub GUI ran")
+}
+
+// Without a desktop app (or with --web-only) the settings are served as a web page until Ctrl+C.
+func TestSettingsInTheBrowser(t *testing.T) {
+	for _, args := range [][]string{{"settings", "presets", "--no-browser"}, {"app", "--web-only", "--no-browser"}} {
+		ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
+		var out, errs bytes.Buffer
+		data := t.TempDir()
+		code := run(ctx, args, &out, &errs, func() (*app.App, error) {
+			return app.New(app.Options{DataDir: data, Catalog: convert.NewCatalog(fake{}), WorkRoot: t.TempDir()})
+		})
+		cancel()
+		if code != exitSuccess || !strings.Contains(out.String(), "http://127.0.0.1:") {
+			t.Fatalf("%v: %d %q %q", args, code, out.String(), errs.String())
+		}
+		if args[0] == "settings" && !strings.Contains(out.String(), "/#/presets") {
+			t.Fatalf("page: %q", out.String())
+		}
 	}
 }
 

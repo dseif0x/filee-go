@@ -209,4 +209,3 @@ func writePicture(img *image.NRGBA, format, path string, o *presets.ImageOptions
 	}
 	return err
 }
-

@@ -636,4 +636,3 @@ func TestEveryCutOrFlippedFbxByteReadsOrFailsCleanly(t *testing.T) {
 		t.Fatalf("took %v", d)
 	}
 }
-

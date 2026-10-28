@@ -36,6 +36,7 @@ export function HideTool({ job: id }) {
   }, [job]);
 
   const pos = (e) => {
+    if (!box.current) return [0, 0];
     const b = box.current.getBoundingClientRect();
     return [clamp01((e.clientX - b.left) / b.width), clamp01((e.clientY - b.top) / b.height)];
   };
@@ -54,7 +55,7 @@ export function HideTool({ job: id }) {
   };
   const move = (e) => {
     const d = drag.current;
-    if (!d) return;
+    if (!d || !box.current) return;
     const [x, y] = pos(e);
     let a;
     if (d.mode === 'new') a = { x: Math.min(d.x0, x), y: Math.min(d.y0, y), width: Math.abs(x - d.x0), height: Math.abs(y - d.y0) };

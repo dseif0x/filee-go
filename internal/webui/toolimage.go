@@ -8,7 +8,6 @@ import (
 	"image/gif"
 	"image/jpeg"
 	"image/png"
-	"math"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -373,5 +372,3 @@ func (s *server) imageEdit(w http.ResponseWriter, r *http.Request, t *ToolJob) {
 }
 
 func clampInt(v, lo, hi int) int { return max(lo, min(v, hi)) }
-
-var _ = math.Round

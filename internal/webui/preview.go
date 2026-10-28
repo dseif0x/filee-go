@@ -14,7 +14,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strconv"
 	"sync"
 
 	_ "golang.org/x/image/bmp"
@@ -24,6 +23,7 @@ import (
 
 	"github.com/dseif0x/filee-go/internal/app"
 	"github.com/dseif0x/filee-go/internal/convert"
+	"github.com/dseif0x/filee-go/internal/engines/pdf"
 	"github.com/dseif0x/filee-go/internal/formats"
 	"github.com/dseif0x/filee-go/internal/jobs"
 	"github.com/dseif0x/filee-go/internal/presets"
@@ -44,6 +44,7 @@ type converter struct {
 
 	cacheMu sync.Mutex
 	cache   map[string]*previewResult
+	docs    map[string]*pdf.PreviewDocument
 	order   []string
 }
 
@@ -159,18 +160,24 @@ func (c *converter) preview(ctx context.Context, path string, page, maxDim int) 
 func (c *converter) render(ctx context.Context, path string, page, maxDim int) (*previewResult, error) {
 	f := formats.Detect(path)
 	if f != nil && f.ID == "pdf" {
-		pages, _ := pdfPageCount(path)
-		outs, cleanup, err := c.convertTo(ctx, path, "png", strconv.Itoa(page+1))
+		doc, err := c.pdfDoc(path)
 		if err != nil {
-			return &previewResult{Pages: pages}, err
+			return nil, err
 		}
-		defer cleanup()
-		img, err := decodeFile(outs[0])
+		pp, err := doc.Preview(ctx, page, maxDim)
+		if err != nil {
+			return nil, err
+		}
+		img, err := png.Decode(bytes.NewReader(pp.Png))
 		if err != nil {
 			return nil, err
 		}
 		r := encodePreview(img, maxDim)
-		r.Pages = pages
+		r.PNG = pp.Png
+		r.Pages = doc.PageCount()
+		// The page's own size: in points, the crop works in parts of it.
+		w, h := doc.PageSize(page)
+		r.Width, r.Height = int(w+0.5), int(h+0.5)
 		return r, nil
 	}
 	img, err := decodeFile(path)
@@ -188,6 +195,35 @@ func (c *converter) render(ctx context.Context, path string, page, maxDim int) (
 	r := encodePreview(img, maxDim)
 	r.Pages = 1
 	return r, nil
+}
+
+// pdfDoc opens a PDF for previews once (its pages are rendered from memory).
+func (c *converter) pdfDoc(path string) (*pdf.PreviewDocument, error) {
+	fi, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+	key := fmt.Sprintf("%s|%d|%d", path, fi.Size(), fi.ModTime().UnixNano())
+	c.cacheMu.Lock()
+	if c.docs == nil {
+		c.docs = map[string]*pdf.PreviewDocument{}
+	}
+	d := c.docs[key]
+	c.cacheMu.Unlock()
+	if d != nil {
+		return d, nil
+	}
+	d, err = pdf.OpenPreview(path)
+	if err != nil {
+		return nil, err
+	}
+	c.cacheMu.Lock()
+	if len(c.docs) > 8 {
+		clear(c.docs)
+	}
+	c.docs[key] = d
+	c.cacheMu.Unlock()
+	return d, nil
 }
 
 func encodePreview(img image.Image, maxDim int) *previewResult {

@@ -103,6 +103,7 @@ func (s *server) routes() {
 	m.HandleFunc("GET /api/update", s.checkUpdate)
 
 	s.toolRoutes()
+	s.packageRoutes()
 }
 
 // ---- helpers ----

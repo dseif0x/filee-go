@@ -170,7 +170,7 @@ func (r *toolRegistry) changed(t *ToolJob) {
 // may be "" to use the first built-in preset of the tool. Files the tool
 // can't open are left out; an error when none is left.
 func NewToolJob(a *app.App, tool string, paths []string, presetID string) (id string, err error) {
-	t, err := newToolJob(a, tool, paths, presetID)
+	t, err := newToolJob(a, tool, paths, presetID, "")
 	if err != nil {
 		return "", err
 	}
@@ -183,7 +183,20 @@ var defaultToolPresets = map[string]string{
 	ToolPdfPages: "tool-pdf-pages", ToolPrint: "tool-sheet-studio",
 }
 
-func newToolJob(a *app.App, tool string, paths []string, presetID string) (*ToolJob, error) {
+// validToken: a job token the page may choose (the macOS app makes one per window).
+func validToken(s string) bool {
+	if len(s) < 8 || len(s) > 64 {
+		return false
+	}
+	for _, c := range s {
+		if !(c >= '0' && c <= '9' || c >= 'a' && c <= 'f' || c >= 'A' && c <= 'F' || c == '-' || c == '_') {
+			return false
+		}
+	}
+	return true
+}
+
+func newToolJob(a *app.App, tool string, paths []string, presetID, token string) (*ToolJob, error) {
 	var p *presets.Preset
 	if presetID != "" {
 		if p = a.Preset(presetID); p == nil {
@@ -210,9 +223,13 @@ func newToolJob(a *app.App, tool string, paths []string, presetID string) (*Tool
 	}
 	t := &ToolJob{Tool: tool, Preset: p.Clone(), Name: a.Texts().PresetName(p), Created: time.Now(), clips: map[int]*clipSession{}}
 	t.AddPages = p.ID == "tool-pdf-add"
-	b := make([]byte, 8)
-	_, _ = rand.Read(b)
-	t.ID = hex.EncodeToString(b)
+	if validToken(token) {
+		t.ID = token
+	} else {
+		b := make([]byte, 8)
+		_, _ = rand.Read(b)
+		t.ID = hex.EncodeToString(b)
+	}
 
 	planner := a.Planner()
 	left := 0
@@ -252,6 +269,11 @@ func newToolJob(a *app.App, tool string, paths []string, presetID string) (*Tool
 	t.Files[0].State = "current"
 	r := toolsOf(a)
 	r.mu.Lock()
+	if old, ok := r.jobs[t.ID]; ok {
+		// The page asked again for the window it already has (a reload).
+		r.mu.Unlock()
+		return old, nil
+	}
 	r.jobs[t.ID] = t
 	// Tools closed a day ago are forgotten.
 	for id, j := range r.jobs {
@@ -322,6 +344,8 @@ func (s *server) toolRoutes() {
 
 func (s *server) openTool(w http.ResponseWriter, r *http.Request) {
 	var in struct {
+		// ID is the job token of the window's address (the macOS app chooses it), "" for a new one.
+		ID       string   `json:"id"`
 		Tool     string   `json:"tool"`
 		Paths    []string `json:"paths"`
 		PresetID string   `json:"presetId"`
@@ -329,7 +353,7 @@ func (s *server) openTool(w http.ResponseWriter, r *http.Request) {
 	if !readJSON(w, r, &in) {
 		return
 	}
-	t, err := newToolJob(s.a, in.Tool, in.Paths, in.PresetID)
+	t, err := newToolJob(s.a, in.Tool, in.Paths, in.PresetID, in.ID)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return

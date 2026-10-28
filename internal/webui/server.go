@@ -12,9 +12,13 @@
 //
 //	baseURL + "/#/<page>"                     home, toolbar, presets, triggers, watch,
 //	                                          engines, history, general, theme, about
-//	baseURL + "/#/tool/<tool>?job=<id>"       crop, clip, hide, image-edit, pdf-pages, print
+//	baseURL + "/#/tool/<tool>?job=<token>&preset=<preset id>&files=<JSON array of paths>"
+//	                                          crop, clip, hide, image-edit, pdf-pages, print
 //
-// A tool's job id comes from NewToolJob (or POST <baseURL>/api/tools).
+// The job token is chosen by the opener (the macOS app makes a fresh random
+// hex one per window); the page opens the tool on the files with the preset
+// under that token, so a reload finds the same window. A job made with
+// NewToolJob (or POST <baseURL>/api/tools) needs only ?job=<id>.
 package webui
 
 import (
@@ -51,6 +55,7 @@ type server struct {
 	static fs.FS
 
 	conv *converter // private queue for previews (not in the history)
+	pkgs *packageManager
 
 	exportMu sync.Mutex
 }
@@ -91,6 +96,7 @@ func newServer(a *app.App, port int) *server {
 		mux: http.NewServeMux(), static: sub,
 	}
 	s.conv = newConverter(a)
+	s.pkgs = newPackageManager(a)
 	s.routes()
 	return s
 }

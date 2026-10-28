@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 
 	"github.com/dseif0x/filee-go/internal/formats"
@@ -210,5 +209,3 @@ func (s *server) pdfSave(w http.ResponseWriter, r *http.Request, t *ToolJob) {
 	t.mu.Unlock()
 	writeJSON(w, map[string]any{"path": out, "message": s.a.Text("pdf_editor.saved", filepath.Base(out))})
 }
-
-var _ = model.NewDefaultConfiguration

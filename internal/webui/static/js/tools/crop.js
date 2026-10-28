@@ -31,6 +31,7 @@ export function useRectDrag({ rect, setRect, ratio, pw, ph, boxRef, min = 0.01 }
   const start = (e, mode) => {
     e.preventDefault();
     e.stopPropagation();
+    if (!boxRef.current) return;
     const box = boxRef.current.getBoundingClientRect();
     drag.current = { mode, x0: e.clientX, y0: e.clientY, r: { ...rect }, box };
     e.currentTarget.setPointerCapture?.(e.pointerId);

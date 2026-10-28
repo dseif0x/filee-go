@@ -49,8 +49,9 @@ function Jobs() {
       const failed = j.files.filter((f) => f.state === 'Failed').length;
       const running = j.state === 'Queued' || j.state === 'Running';
       const outs = j.files.flatMap((f) => f.outputs || []);
-      const label = running ? t('toast.converting', j.files.length === 1 ? baseName(j.files[0].sourcePath) : t('home.files', j.files.length), j.presetName)
-        : j.state === 'Cancelled' ? t('toast.cancelled') : failed ? t('toast.done_errors', failed, j.files.length) : t('toast.done');
+      const what = j.files.length === 1 ? baseName(j.files[0].sourcePath) : t('home.files', j.files.length);
+      const label = running ? t('toast.converting', what, j.presetName)
+        : `${what} · ${j.state === 'Cancelled' ? t('toast.cancelled') : failed ? t('toast.done_errors', failed, j.files.length) : t('toast.done')}`;
       return html`<div class="job">
         <div class="grow" style="flex:1;min-width:0">
           <div class="row between"><span class="title">${label}</span><span class="caption">${j.presetName}</span></div>

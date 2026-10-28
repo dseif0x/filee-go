@@ -5,11 +5,26 @@ import { html, useState, useEffect, Button, Icon, IconButton } from '../ui.js';
 import { api, onTool, store, closeWindow, openPath } from '../api.js';
 import { t } from '../i18n.js';
 
+/** toolParams are the query of the window's address: job, preset, files (JSON). */
+function toolParams() {
+  const h = location.hash;
+  const q = new URLSearchParams(h.includes('?') ? h.slice(h.indexOf('?') + 1) : '');
+  const tool = (h.match(/#\/tool\/([^?]+)/) || [])[1] || '';
+  let files = [];
+  try { files = JSON.parse(q.get('files') || '[]'); } catch { files = []; }
+  return { tool, preset: q.get('preset') || '', files };
+}
+
 export function useTool(id) {
   const [job, setJob] = useState(store.tools[id] || null);
   const [error, setError] = useState('');
   useEffect(() => {
-    api.get('api/tools/' + id).then((j) => { store.tools[id] = j; setJob(j); }).catch((e) => setError(e.message));
+    const got = (j) => { store.tools[id] = j; setJob(j); };
+    const p = toolParams();
+    // A window opened with its files in the address opens the tool under the
+    // address's token (the same window again after a reload).
+    const ready = p.files.length ? api.post('api/tools', { id, tool: p.tool, presetId: p.preset, paths: p.files }) : Promise.resolve();
+    ready.then(() => api.get('api/tools/' + id)).then(got).catch((e) => setError(e.message));
     return onTool(id, setJob);
   }, [id]);
   return [job, setJob, error];
@@ -91,8 +106,9 @@ export function useFit(ref, w, h, pad = 32) {
   const [box, setBox] = useState({ width: 0, height: 0 });
   useEffect(() => {
     if (!ref.current) return undefined;
+    const el = ref.current;
     const ro = new ResizeObserver(() => {
-      const r = ref.current.getBoundingClientRect();
+      const r = el.getBoundingClientRect();
       setBox({ width: r.width, height: r.height });
     });
     ro.observe(ref.current);

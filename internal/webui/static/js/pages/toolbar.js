@@ -31,6 +31,13 @@ export function caption(p) {
   return formatName(p.targetFormat);
 }
 
+/** sliceItem: the name on the slice, and its format underneath unless the name says it already. */
+function sliceItem(p) {
+  const label = donutName(p);
+  const cap = caption(p);
+  return { preset: p, label, caption: cap && !label.toLowerCase().includes(cap.toLowerCase()) ? cap : '' };
+}
+
 const findPreset = (id) => store.library?.presets.find((p) => p.id === id);
 
 // ---- the donut ----
@@ -96,7 +103,7 @@ function trim(s, n) { return s && s.length > n ? s.slice(0, n - 1) + '…' : s; 
 /** DonutPreview shows the first profile's front, at the settings' opacity (Theme page). */
 export function DonutPreview({ size = 220 }) {
   const prof = store.library?.profiles?.[0];
-  const items = (prof?.presetIds || []).map(findPreset).filter(Boolean).map((p) => ({ preset: p, label: donutName(p), caption: caption(p) }));
+  const items = (prof?.presetIds || []).map(findPreset).filter(Boolean).map(sliceItem);
   return html`<${Donut} items=${items} size=${size} opacity=${store.settings.donut.opacity} />`;
 }
 
@@ -203,7 +210,7 @@ export function ToolbarPage({ route }) {
     if (next.length > store.boot.limits.maxSlices) { notify(t('toolbar.max_reached', store.boot.limits.maxSlices), 'danger'); return; }
     saveProfile((p) => { if (back) p.backPresetIds = next; else p.presetIds = next; });
   };
-  const items = ids.map(findPreset).filter(Boolean).map((p) => ({ preset: p, label: donutName(p), caption: caption(p) }));
+  const items = ids.map(findPreset).filter(Boolean).map(sliceItem);
   const placed = new Set([...profile.presetIds, ...(profile.backPresetIds || [])]);
   const q = paletteSearch.trim().toLowerCase();
   const candidates = lib.presets.filter((p) => !placed.has(p.id))

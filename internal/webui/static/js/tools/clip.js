@@ -55,7 +55,6 @@ export function ClipTool({ job: id }) {
     if (r) { setSt(r); if (r.message) notify(r.message, r.result === false ? 'danger' : ''); }
     return r;
   };
-  useEffect(() => { setSt(null); setMediaError(''); setSel([]); setHead(0); setPlaying(false); }, [i]);
   useEffect(() => { if (job) setFast(!job.preset.media.exactCut); }, [job?.id]);
   // Drags send many moves: one request at a time, the latest move waiting.
   const flight = useRef({ busy: false, next: null });
@@ -71,6 +70,12 @@ export function ClipTool({ job: id }) {
     });
   };
   const init = (duration) => op({ op: 'init', duration: duration || 0 }).then((r) => { if (!r) setMediaError(t('clip.cannot_play')); });
+  // The next video: a fresh start (its metadata may already be there).
+  useEffect(() => {
+    setSt(null); setMediaError(''); setSel([]); setHead(0); setPlaying(false);
+    const v = video.current;
+    if (i >= 0 && v && v.readyState >= 1 && Number.isFinite(v.duration)) init(v.duration);
+  }, [i]);
 
   // Playing: within the clip, past cut-out pieces, at each piece's speed and volume.
   useEffect(() => {
@@ -182,7 +187,7 @@ export function ClipTool({ job: id }) {
   const speeds = store.boot.limits.clipSpeeds;
   return html`<div class="tool">
     <${ToolHead} title=${file?.name || job.name} job=${job} index=${i} />
-    ${finished(job) ? html`<div class="tool-body"><div class="tool-stage"><${Summary} job=${job} /></div></div>` : html`
+    ${finished(job) ? html`<div class="tool-body"><div class="tool-stage"><${Summary} job=${job} /></div></div>` : i < 0 ? html`<div class="tool-body"><div class="tool-stage"><${Spinner} size=${28} /></div></div>` : html`
     <div class="tool-body" style="flex-direction:column">
       <div class="clip-stage">
         <video ref=${video} src=${base + '/clip/media'} preload="auto" playsinline

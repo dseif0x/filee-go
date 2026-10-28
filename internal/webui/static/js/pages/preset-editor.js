@@ -384,7 +384,7 @@ export function PresetEditor({ preset, onState }) {
         <${Select} value=${p.cad.colors || 'AsDrawn'} options=${opt('presets.cad_colors.', ['AsDrawn', 'BlackAndWhite', 'Grayscale'])} onChange=${(x) => set((n) => { n.cad.colors = x; })} /></${Field}>
     </${Card}>`}
 
-    ${v.showZipResult || true ? html`<${Card} title=${t('presets.group.output')}>
+    <${Card} title=${t('presets.group.output')}>
       <div class="grid2">
         <${Field} label=${t('presets.location')}><${Select} value=${ui.location} options=${opt('presets.location.', ['Default', 'SameFolder', 'Subfolder', 'CustomFolder', 'Ask'])} onChange=${(x) => setU({ location: x })} /></${Field}>
         <${Field} label=${t('presets.conflict')}><${Select} value=${o.conflict} options=${opt('presets.conflict.', ['Rename', 'Overwrite', 'Skip'])} onChange=${(x) => set((n) => { n.output.conflict = x; })} /></${Field}>
@@ -396,7 +396,7 @@ export function PresetEditor({ preset, onState }) {
       <${Check} label=${t('presets.keep_dates')} hint=${t('presets.keep_dates_hint')} checked=${o.keepDates} onChange=${(x) => set((n) => { n.output.keepDates = x; })} />
       ${v.showZipResult && html`<${Check} label=${t('presets.zip_result')} hint=${t('presets.zip_result_hint')} checked=${o.zipResult} onChange=${(x) => set((n) => { n.output.zipResult = x; })} />`}
       <${Check} label=${t('presets.replace_original')} hint=${t('presets.replace_original_hint')} checked=${o.replaceOriginal} onChange=${(x) => set((n) => { n.output.replaceOriginal = x; })} />
-    </${Card}>` : null}
+    </${Card}>
   </div>`;
 }
 

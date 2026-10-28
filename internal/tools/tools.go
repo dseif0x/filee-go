@@ -13,8 +13,11 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
+	"time"
 )
 
 // EnginesDir is where Filee installs downloaded engines
@@ -76,15 +79,7 @@ func find(s Spec) string {
 			return p
 		}
 	}
-	for _, d := range s.Dirs[runtime.GOOS] {
-		if !filepath.IsAbs(d) {
-			d = filepath.Join(EnginesDir(), d)
-		}
-		if strings.HasPrefix(d, "~/") {
-			if h, err := os.UserHomeDir(); err == nil {
-				d = filepath.Join(h, d[2:])
-			}
-		}
+	for _, d := range expandDirs(s.Dirs[runtime.GOOS]) {
 		for _, n := range s.Names {
 			for _, c := range candidates(filepath.Join(d, n)) {
 				if isExec(c) {
@@ -106,6 +101,79 @@ func find(s Spec) string {
 					return p
 				}
 			}
+		}
+	}
+	return ""
+}
+
+// expandDirs resolves "~/" (home), relative folders (below EnginesDir) and
+// glob patterns ("C:/Program Files/gs/gs*/bin", newest version first).
+func expandDirs(dirs []string) []string {
+	var out []string
+	for _, d := range dirs {
+		if strings.HasPrefix(d, "~/") {
+			h, err := os.UserHomeDir()
+			if err != nil {
+				continue
+			}
+			d = filepath.Join(h, d[2:])
+		} else if !filepath.IsAbs(d) {
+			d = filepath.Join(EnginesDir(), d)
+		}
+		if strings.ContainsAny(d, "*?[") {
+			matches, _ := filepath.Glob(d)
+			sort.Sort(sort.Reverse(sort.StringSlice(matches)))
+			out = append(out, matches...)
+			continue
+		}
+		out = append(out, d)
+	}
+	return out
+}
+
+// FolderWithPrograms returns the folder holding every one of programs, given
+// a program or a folder the user picked: that folder itself, or its bin,
+// program or Contents/MacOS sub folder (FFmpeg builds, LibreOffice, .app
+// bundles). "" when they are missing.
+func FolderWithPrograms(path string, programs ...string) string {
+	if strings.TrimSpace(path) == "" {
+		return ""
+	}
+	st, err := os.Stat(path)
+	if err != nil {
+		return ""
+	}
+	start := path
+	if !st.IsDir() {
+		start = filepath.Dir(path)
+	}
+	for _, f := range []string{start, filepath.Join(start, "bin"), filepath.Join(start, "program"), filepath.Join(start, "Contents", "MacOS")} {
+		ok := true
+		for _, p := range programs {
+			found := false
+			for _, c := range candidates(filepath.Join(f, p)) {
+				if isExec(c) {
+					found = true
+					break
+				}
+			}
+			if !found {
+				ok = false
+				break
+			}
+		}
+		if ok {
+			return f
+		}
+	}
+	return ""
+}
+
+// Program returns the path of name in folder (with .exe on Windows), or "".
+func Program(folder, name string) string {
+	for _, c := range candidates(filepath.Join(folder, name)) {
+		if isExec(c) {
+			return c
 		}
 	}
 	return ""
@@ -143,22 +211,79 @@ type Cmd struct {
 	// OnStderrLine / OnStdoutLine receive output lines as they come (progress parsing).
 	OnStderrLine func(string)
 	OnStdoutLine func(string)
+	// Timeout is the longest the program may run (0: no limit); then it is
+	// killed and Run returns *TimeoutError.
+	Timeout time.Duration
+	// StallTimeout kills a program that wrote nothing on either stream for this
+	// long (0: never) and Run returns *StalledError: for programs that keep
+	// reporting progress, so a long run goes on and a hung one stops.
+	StallTimeout time.Duration
+	// LowPriority runs the program below normal priority, so a long conversion
+	// on every core leaves room for the desktop.
+	LowPriority bool
 }
 
 // Run runs the program and waits; the process is killed when ctx ends. A
 // non-zero exit is returned as *ExitError with the end of stderr.
 func Run(ctx context.Context, c Cmd) (*Result, error) {
-	cmd := exec.CommandContext(ctx, c.Path, c.Args...)
+	runCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	if c.Timeout > 0 {
+		var cancelT context.CancelFunc
+		runCtx, cancelT = context.WithTimeout(runCtx, c.Timeout)
+		defer cancelT()
+	}
+	cmd := exec.CommandContext(runCtx, c.Path, c.Args...)
 	cmd.Dir = c.Dir
 	cmd.Env = append(os.Environ(), c.Env...)
+	// A killed program may leave a child holding the pipes; don't wait for it forever.
+	cmd.WaitDelay = 10 * time.Second
 	hideWindow(cmd)
+	killTree(cmd)
+	if c.LowPriority {
+		lowerAtStart(cmd)
+	}
 	if c.Stdin != nil {
 		cmd.Stdin = bytes.NewReader(c.Stdin)
 	}
+	var watch *StallWatch
+	var touch func()
+	if c.StallTimeout > 0 {
+		watch = NewStallWatch(c.StallTimeout)
+		touch = watch.Touch
+	}
 	var out, errb bytes.Buffer
-	cmd.Stdout = &lineWriter{buf: &out, fn: c.OnStdoutLine}
-	cmd.Stderr = &lineWriter{buf: &errb, fn: c.OnStderrLine}
-	err := cmd.Run()
+	cmd.Stdout = &lineWriter{buf: &out, fn: c.OnStdoutLine, touch: touch}
+	cmd.Stderr = &lineWriter{buf: &errb, fn: c.OnStderrLine, touch: touch}
+	err := cmd.Start()
+	if err != nil {
+		return &Result{}, err
+	}
+	if c.LowPriority {
+		lowerAfterStart(cmd)
+	}
+	var stalled atomic.Bool
+	if watch != nil {
+		done := make(chan struct{})
+		defer close(done)
+		go func() {
+			t := time.NewTicker(min(time.Second, c.StallTimeout))
+			defer t.Stop()
+			for {
+				select {
+				case <-done:
+					return
+				case <-t.C:
+					if watch.Stalled() {
+						stalled.Store(true)
+						cancel()
+						return
+					}
+				}
+			}
+		}()
+	}
+	err = cmd.Wait()
 	res := &Result{Stdout: out.Bytes(), Stderr: errb.Bytes()}
 	if cmd.ProcessState != nil {
 		res.ExitCode = cmd.ProcessState.ExitCode()
@@ -166,11 +291,73 @@ func Run(ctx context.Context, c Cmd) (*Result, error) {
 	if ctx.Err() != nil {
 		return res, ctx.Err()
 	}
+	if stalled.Load() {
+		return res, &StalledError{Program: filepath.Base(c.Path), Limit: c.StallTimeout}
+	}
+	if runCtx.Err() != nil && c.Timeout > 0 {
+		return res, &TimeoutError{Program: filepath.Base(c.Path), Limit: c.Timeout}
+	}
 	var ee *exec.ExitError
+	if errors.As(err, &ee) && IsMissingRuntime(res.ExitCode) {
+		return res, &RuntimeMissingError{Program: filepath.Base(c.Path), Code: res.ExitCode}
+	}
 	if errors.As(err, &ee) {
 		return res, &ExitError{Program: filepath.Base(c.Path), Code: res.ExitCode, Stderr: tail(errb.String(), 2000)}
 	}
 	return res, err
+}
+
+// RuntimeMissingKey is the reason shown when Windows could not start a
+// program because a DLL it needs (the Microsoft C++ runtime) is missing.
+const RuntimeMissingKey = "error.runtime_missing"
+
+// IsMissingRuntime: Windows refused to start the program because of a missing
+// (0xC0000135) or outdated (0xC0000139) DLL.
+func IsMissingRuntime(code int) bool {
+	c := uint32(code)
+	return c == 0xC0000135 || c == 0xC0000139
+}
+
+// RuntimeMissingError is a program Windows could not start for a missing DLL.
+type RuntimeMissingError struct {
+	Program string
+	Code    int
+}
+
+func (e *RuntimeMissingError) Error() string {
+	return fmt.Sprintf("%s, 0x%08X (a runtime file it needs is missing)", e.Program, uint32(e.Code))
+}
+
+// StalledErrorKey is the reason shown when a program stopped writing anything
+// for its stall limit and was stopped.
+const StalledErrorKey = "error.engine_stalled"
+
+// StalledError is a program killed because it wrote nothing for Limit.
+type StalledError struct {
+	Program string
+	Limit   time.Duration
+}
+
+func (e *StalledError) Error() string {
+	return fmt.Sprintf("%s stopped responding (no output for %s) and was stopped", e.Program, DescribeLimit(e.Limit))
+}
+
+// TimeoutError is a program killed because it ran longer than Limit.
+type TimeoutError struct {
+	Program string
+	Limit   time.Duration
+}
+
+func (e *TimeoutError) Error() string {
+	return fmt.Sprintf("%s did not finish within %s", e.Program, DescribeLimit(e.Limit))
+}
+
+// DescribeLimit is "10 min", or "30 s" below a minute.
+func DescribeLimit(d time.Duration) string {
+	if d >= time.Minute {
+		return fmt.Sprintf("%.0f min", d.Minutes())
+	}
+	return fmt.Sprintf("%.0f s", d.Seconds())
 }
 
 // ExitError is a program that ended with a non-zero exit code.
@@ -196,11 +383,15 @@ func tail(s string, n int) string {
 type lineWriter struct {
 	buf     *bytes.Buffer
 	fn      func(string)
+	touch   func()
 	pending []byte
 }
 
 func (w *lineWriter) Write(p []byte) (int, error) {
 	w.buf.Write(p)
+	if w.touch != nil {
+		w.touch()
+	}
 	if w.fn == nil {
 		return len(p), nil
 	}

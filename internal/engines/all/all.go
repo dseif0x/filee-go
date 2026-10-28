@@ -6,6 +6,9 @@ import (
 	"github.com/dseif0x/filee-go/internal/convert"
 	"github.com/dseif0x/filee-go/internal/engines/data"
 	"github.com/dseif0x/filee-go/internal/engines/fonts"
+	"github.com/dseif0x/filee-go/internal/engines/ghostscript"
+	"github.com/dseif0x/filee-go/internal/engines/media"
+	"github.com/dseif0x/filee-go/internal/engines/ocr"
 	"github.com/dseif0x/filee-go/internal/engines/subtitles"
 )
 
@@ -16,6 +19,13 @@ func Converters() []convert.Converter {
 		fonts.New(),
 		data.New(),
 		subtitles.New(),
+		// Media
+		media.New(),
+		// OCR: Apple Vision first, so a Mac needs no download for the languages it reads.
+		ocr.NewVision(),
+		ocr.NewTesseract(),
+		// PostScript
+		ghostscript.New(),
 	}
 }
 

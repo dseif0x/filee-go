@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"unicode"
 )
@@ -233,4 +232,3 @@ func groupDigits(n int) string {
 	return sb.String()
 }
 
-var isWindows = runtime.GOOS == "windows"

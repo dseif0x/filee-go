@@ -246,7 +246,7 @@ type HiddenArea struct {
 const (
 	MaxJoinGap          = 1000
 	TransparentJoin     = "transparent"
-	DefaultHideStrength = 50
+	DefaultHideStrength = 5
 )
 
 // AnimationSpeeds are the speeds the UI offers for animated pictures.

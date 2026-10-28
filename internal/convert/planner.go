@@ -228,3 +228,12 @@ func (q queue) Less(i, j int) bool { return q[i].cost < q[j].cost }
 func (q queue) Swap(i, j int)      { q[i], q[j] = q[j], q[i] }
 func (q *queue) Push(x any)        { *q = append(*q, x.(item)) }
 func (q *queue) Pop() any          { o := *q; it := o[len(o)-1]; *q = o[:len(o)-1]; return it }
+
+// Steps is how many steps the cheapest plain route takes (0 = none); it makes
+// the planner a presets.Router for the tools.
+func (p *Planner) Steps(from, to string) int {
+	if r := p.Plan(from, to, Options{}); r != nil {
+		return len(r.Steps)
+	}
+	return 0
+}

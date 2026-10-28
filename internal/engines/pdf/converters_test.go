@@ -8,12 +8,15 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/xuri/excelize/v2"
 
 	"github.com/dseif0x/filee-go/internal/convert"
+	"github.com/dseif0x/filee-go/internal/doc"
+	"github.com/dseif0x/filee-go/internal/engines/docxwriter"
 	"github.com/dseif0x/filee-go/internal/presets"
 )
 
@@ -92,12 +95,7 @@ func TestPdfTextOutputs(t *testing.T) {
 		t.Fatalf("%q", data)
 	}
 
-	step = newStep(t, src, "pdf", "docx", nil)
-	out, err = PdfText{}.Convert(context.Background(), step, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	parts := zipParts(t, out[0])
+	parts := zipParts(t, pdfToDocx(t, src))
 	doc := parts["word/document.xml"]
 	if !strings.Contains(doc, "First paragraph of the text.") || !strings.Contains(doc, `<w:pStyle w:val="Heading1"/>`) || !strings.Contains(doc, `w:w="11900"`) {
 		t.Fatalf("document.xml: %s", doc)
@@ -119,12 +117,7 @@ func TestPdfTextOutputs(t *testing.T) {
 	if _, err := os.Stat(strings.TrimSuffix(out[0], ".md") + "_files/img0001.jpg"); err != nil {
 		t.Fatal(err)
 	}
-	step = newStep(t, scan, "pdf", "docx", nil)
-	out, err = PdfText{}.Convert(context.Background(), step, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if parts := zipParts(t, out[0]); !strings.Contains(parts["word/document.xml"], `behindDoc="1"`) || parts["word/media/image1.jpg"] == "" {
+	if parts := zipParts(t, pdfToDocx(t, scan)); !strings.Contains(parts["word/document.xml"], `behindDoc="1"`) || parts["word/media/image1.jpg"] == "" {
 		t.Fatal("the scan should lie behind the page")
 	}
 }
@@ -217,4 +210,19 @@ func TestPdfSlides(t *testing.T) {
 	if !strings.Contains(parts["ppt/presentation.xml"], `<p:sldSz cx="7556500" cy="10693400"/>`) {
 		t.Fatal(parts["ppt/presentation.xml"])
 	}
+}
+
+// pdfToDocx writes a PDF as DOCX the way the DOCX writer engine does: the
+// document reader registered by this package, then the DOCX writer.
+func pdfToDocx(t *testing.T, src string) string {
+	t.Helper()
+	d, err := doc.Read(src, "pdf", t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := filepath.Join(t.TempDir(), "out.docx")
+	if err := docxwriter.Write(d, out); err != nil {
+		t.Fatal(err)
+	}
+	return out
 }

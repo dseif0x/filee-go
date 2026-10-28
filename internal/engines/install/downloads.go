@@ -42,8 +42,9 @@ type Package struct {
 	ConverterIDs []string
 }
 
-// RuntimeIdentifier is the OS and architecture as engines.json names them (osx-arm64, win-x64, …).
-func RuntimeIdentifier() string { return runtimeID(runtime.GOOS, runtime.GOARCH) }
+// RuntimeIdentifier is the OS and architecture as engines.json names them
+// (osx-arm64, win-x64, …): the machine's own architecture on a Mac (nativeArch).
+func RuntimeIdentifier() string { return runtimeID(runtime.GOOS, nativeArch(runtime.GOARCH)) }
 
 func runtimeID(goos, goarch string) string {
 	os := map[string]string{"windows": "win", "darwin": "osx", "linux": "linux"}[goos]
@@ -223,7 +224,7 @@ func UnavailableReason(p Package, components map[string]Component, goos string) 
 	if CanDownload(p, components) {
 		return ""
 	}
-	rid := runtimeID(goos, runtime.GOARCH)
+	rid := runtimeID(goos, nativeArch(runtime.GOARCH))
 	switch goos {
 	case "darwin":
 		switch p.ID {

@@ -35,6 +35,7 @@ import (
 	"time"
 
 	"github.com/dseif0x/filee-go/internal/convert"
+	"github.com/dseif0x/filee-go/internal/engines/pdf"
 	"github.com/dseif0x/filee-go/internal/formats"
 	"github.com/dseif0x/filee-go/internal/tools"
 )
@@ -58,16 +59,6 @@ var (
 	// ForSheets: spreadsheets → PDF (print areas and page breaks as Excel prints them).
 	ForSheets = false
 )
-
-// RemoveBlankPages, when set (by the PDF engine), removes pages without any
-// painting operator from a PDF and returns how many; Calc turns stale print
-// tiles into empty pages.
-var RemoveBlankPages func(path string) (int, error)
-
-// FirstPage, when set (by the PDF engine), writes the first page of the page
-// range of a PDF as a PDF of its own: Draw's SVG export draws every page of
-// a PDF on top of each other.
-var FirstPage func(input, output, pageRange string) error
 
 var (
 	writer  = []string{"docx", "doc", "odt", "rtf", "fodt", "ott"}
@@ -149,8 +140,9 @@ func (c *Converter) locate() {
 // Locate finds soffice: FILEE_LIBREOFFICE, Filee's engine folder, the PATH and the usual install places.
 func Locate() string {
 	spec := tools.Spec{
-		Names: []string{"soffice"},
-		Env:   "FILEE_LIBREOFFICE",
+		Names:   []string{"soffice"},
+		Env:     "FILEE_LIBREOFFICE",
+		Package: "libreoffice",
 		Dirs: map[string][]string{
 			"darwin":  {"libreoffice/LibreOffice.app/Contents/MacOS", "libreoffice/Contents/MacOS", "/Applications/LibreOffice.app/Contents/MacOS", "~/Applications/LibreOffice.app/Contents/MacOS"},
 			"linux":   {"libreoffice/program", "/usr/lib/libreoffice/program", "/usr/lib64/libreoffice/program"},
@@ -363,7 +355,8 @@ func (c *Converter) Convert(ctx context.Context, step *convert.Step, progress co
 	progress.Report(0.1)
 
 	input := step.InputPath
-	if step.From == "pdf" && step.To == "svg" && FirstPage != nil {
+	if step.From == "pdf" && step.To == "svg" {
+		// Draw's SVG export draws every page of a PDF on top of each other: one page, as the other drawings' SVG.
 		folder, err := os.MkdirTemp(step.WorkDir, "lo-page-")
 		if err != nil {
 			return nil, err
@@ -373,7 +366,7 @@ func (c *Converter) Convert(ctx context.Context, step *convert.Step, progress co
 		if step.Preset != nil {
 			pr = step.Preset.Pdf.PageRange
 		}
-		if err := FirstPage(step.InputPath, page, pr); err != nil {
+		if err := pdf.FirstPage(ctx, step.InputPath, page, pr); err != nil {
 			return nil, err
 		}
 		input = page
@@ -398,8 +391,8 @@ func (c *Converter) Convert(ctx context.Context, step *convert.Step, progress co
 		return nil, errors.New("LibreOffice produced no output")
 	}
 	// Calc sometimes turns stale Excel print tiles into empty PDF pages. PDF/A stays as LibreOffice wrote it.
-	if step.To == "pdf" && !pdfA && FamilyOf(step.From, formats.ExtensionOf(step.InputPath)) == "calc" && RemoveBlankPages != nil {
-		if n, err := RemoveBlankPages(produced); err != nil {
+	if step.To == "pdf" && !pdfA && FamilyOf(step.From, formats.ExtensionOf(step.InputPath)) == "calc" {
+		if n, err := pdf.RemoveBlankPages(ctx, produced); err != nil {
 			c.Log.Info("could not check empty spreadsheet PDF pages", "file", step.InputPath, "error", err)
 		} else if n > 0 && step.Notice != nil {
 			step.Notice("notice.empty_spreadsheet_pages_removed")

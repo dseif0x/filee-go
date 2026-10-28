@@ -14,6 +14,7 @@ import (
 	"unicode"
 
 	"github.com/dseif0x/filee-go/internal/convert"
+	"github.com/dseif0x/filee-go/internal/engines/images"
 	"github.com/dseif0x/filee-go/internal/presets"
 )
 
@@ -51,11 +52,7 @@ func (*Converter) Edges() []convert.Edge {
 	}
 	for _, from := range InputFormats {
 		for _, to := range PictureFormats {
-			cost := 10
-			if to == "gif" {
-				cost = 12 // as for any still picture: a GIF is the animation format
-			}
-			e = append(e, convert.EC(from, to, cost))
+			e = append(e, images.Edge(from, to))
 		}
 	}
 	return e
@@ -121,18 +118,20 @@ func Write(ctx context.Context, m *Model, format string, out convert.OutputAlloc
 	if format == "obj" {
 		return writeObjSet(ctx, m, out, outputs)
 	}
-	path := out.Allocate(format, "")
-	if path == "" {
-		return nil
-	}
-	*outputs = append(*outputs, path)
 	if !slices.Contains(Formats, format) {
 		img, err := renderModel(ctx, m, PreviewSize)
 		if err != nil {
 			return err
 		}
-		return writePicture(applyImageOptions(img, image), format, path, image)
+		written, err := writePicture(img, format, out, image)
+		*outputs = append(*outputs, written...)
+		return err
 	}
+	path := out.Allocate(format, "")
+	if path == "" {
+		return nil
+	}
+	*outputs = append(*outputs, path)
 	f, err := os.Create(path)
 	if err != nil {
 		return err

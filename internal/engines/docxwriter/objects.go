@@ -2,7 +2,6 @@ package docxwriter
 
 import (
 	"fmt"
-	"image"
 	"math"
 	"net/url"
 	"os"
@@ -12,6 +11,7 @@ import (
 	"unicode"
 
 	"github.com/dseif0x/filee-go/internal/doc"
+	"github.com/dseif0x/filee-go/internal/engines/images"
 )
 
 // Objects inside runs: pictures (inline or floating), text boxes and simple
@@ -23,19 +23,8 @@ const (
 	shapeURI   = "http://schemas.microsoft.com/office/word/2010/wordprocessingShape"
 )
 
-// pictureSize is a picture's size in pixels, or ok false.
-func pictureSize(path string) (int, int, bool) {
-	f, err := os.Open(path)
-	if err != nil {
-		return 0, 0, false
-	}
-	defer f.Close()
-	c, _, err := image.DecodeConfig(f)
-	if err != nil || c.Width <= 0 || c.Height <= 0 {
-		return 0, 0, false
-	}
-	return c.Width, c.Height, true
-}
+// pictureSize is a picture's size in pixels, or ok false (C# MagickImageInfo).
+func pictureSize(path string) (int, int, bool) { return images.PictureSize(path) }
 
 func (w *writer) picture(img *doc.Image) string {
 	if st, err := os.Stat(img.Path); err != nil || st.IsDir() {

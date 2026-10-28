@@ -5,10 +5,14 @@ import (
 	"context"
 	"image/color"
 	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
+	"github.com/dseif0x/filee-go/internal/engines/images"
 	"github.com/dseif0x/filee-go/internal/presets"
+	"github.com/dseif0x/filee-go/internal/tools"
 )
 
 func threePages(t *testing.T) string {
@@ -137,5 +141,49 @@ func TestMerge(t *testing.T) {
 	s := pdfInfo(t, out)
 	if len(s) != 4 || s[3][0] != 300 {
 		t.Fatal(s)
+	}
+}
+
+// "Compress with Ghostscript": a stand-in Ghostscript whose PDF is smaller wins.
+func TestCompressWithGhostscript(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the stand-in Ghostscript is a shell script")
+	}
+	dir := t.TempDir()
+	gs := filepath.Join(dir, "gs")
+	script := "#!/bin/sh\nfor a; do case \"$a\" in -sOutputFile=*) printf '%%PDF-1.4 gs' > \"${a#-sOutputFile=}\";; esac; done\n"
+	if err := os.WriteFile(gs, []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("FILEE_GHOSTSCRIPT", gs)
+	tools.Forget()
+	t.Cleanup(tools.Forget)
+	step := newStep(t, threePages(t), "pdf", "pdf", func(p *presets.Preset) {
+		p.Pdf.Compression = presets.PdfCompressEbook
+		p.Pdf.CompressWithGhostscript = true
+	})
+	out, err := PdfSharp{}.Convert(context.Background(), step, nil)
+	if err != nil || len(out) != 1 {
+		t.Fatal(out, err)
+	}
+	if data, _ := os.ReadFile(out[0]); string(data) != "%PDF-1.4 gs" {
+		t.Fatalf("Ghostscript's smaller PDF should win: %q", data[:min(len(data), 40)])
+	}
+}
+
+// Any picture the image engine reads goes into a PDF (C# ImageEncoder.Sources → pdf).
+func TestImageEngineSourcesToPdf(t *testing.T) {
+	for _, from := range []string{"qoi", "psd", "tga"} {
+		src := filepath.Join(t.TempDir(), "in."+from)
+		if err := images.Encode(src, solid(200, 100, color.NRGBA{0, 0, 255, 255}), from, nil); err != nil {
+			t.Fatal(err)
+		}
+		out, err := PdfSharp{}.Convert(context.Background(), newStep(t, src, from, "pdf", nil), nil)
+		if err != nil || len(out) != 1 {
+			t.Fatal(from, out, err)
+		}
+		if s := pdfInfo(t, out[0]); len(s) != 1 || !near(s[0][0], 150, 0.5) {
+			t.Fatal(from, s)
+		}
 	}
 }

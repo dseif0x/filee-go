@@ -1,14 +1,19 @@
 package ghostscript
 
 import (
+	"bytes"
 	"context"
+	"image"
+	"image/png"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
 	"github.com/dseif0x/filee-go/internal/convert"
 	"github.com/dseif0x/filee-go/internal/presets"
+	"github.com/dseif0x/filee-go/internal/tools"
 )
 
 func TestArguments(t *testing.T) {
@@ -72,5 +77,44 @@ func TestWithGhostscript(t *testing.T) {
 		if st, err := os.Stat(out); err != nil || st.Size() == 0 {
 			t.Error(to, "empty")
 		}
+	}
+}
+
+// EPS → PNG: Ghostscript's pages go through the image engine, which applies the preset.
+func TestPngPagesThroughTheImageEngine(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the stand-in Ghostscript is a shell script")
+	}
+	dir := t.TempDir()
+	page := filepath.Join(dir, "page.png")
+	img := image.NewNRGBA(image.Rect(0, 0, 40, 20))
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, img); err != nil {
+		t.Fatal(err)
+	}
+	os.WriteFile(page, buf.Bytes(), 0o644)
+	gs := filepath.Join(dir, "gs")
+	script := "#!/bin/sh\nfor a; do case \"$a\" in -sOutputFile=*) o=\"${a#-sOutputFile=}\"; for n in 1 2; do cp \"$PAGE\" \"$(printf \"$o\" $n)\"; done;; esac; done\n"
+	os.WriteFile(gs, []byte(script), 0o755)
+	t.Setenv("FILEE_GHOSTSCRIPT", gs)
+	tools.Forget()
+	t.Cleanup(tools.Forget)
+	t.Setenv("PAGE", page)
+	src := filepath.Join(dir, "in.ps")
+	os.WriteFile(src, []byte("%!PS\n"), 0o644)
+	p := presets.New("t", "png")
+	p.Image.Rotation = presets.Right90
+	outDir := t.TempDir()
+	step := &convert.Step{InputPath: src, From: "ps", To: "png", Preset: p, WorkDir: t.TempDir(),
+		Output: convert.AllocatorFunc(func(ext, suffix string) string { return filepath.Join(outDir, "in"+suffix+"."+ext) })}
+	out, err := New().Convert(context.Background(), step, nil)
+	if err != nil || len(out) != 2 || !strings.HasSuffix(out[1], "in_p2.png") {
+		t.Fatal(out, err)
+	}
+	f, _ := os.Open(out[0])
+	defer f.Close()
+	cfg, err := png.DecodeConfig(f)
+	if err != nil || cfg.Width != 20 || cfg.Height != 40 {
+		t.Fatalf("turned page: %+v %v", cfg, err)
 	}
 }

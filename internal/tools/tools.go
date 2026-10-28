@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -42,17 +43,64 @@ type Spec struct {
 	// Dirs are extra folders to look in, per GOOS ("darwin", "linux", "windows");
 	// relative ones are below EnginesDir.
 	Dirs map[string][]string
+	// Package is the engine package id ("ffmpeg", "libreoffice", …): a copy
+	// the user picked for it in Settings › Engines (SetOwnCopies) is used
+	// first, as the C# EngineEnvironment.OwnCopies.
+	Package string
+	// Requires are programs the user's own copy must have next to the found
+	// one (ffprobe beside ffmpeg).
+	Requires []string
 }
 
 var (
-	mu    sync.Mutex
-	cache = map[string]string{}
+	mu        sync.Mutex
+	cache     = map[string]string{}
+	ownCopies = map[string]string{}
 )
 
-// Find returns the full path of the program, or "" when it is not installed.
-// Results are cached until Forget.
+// SetOwnCopies sets the user's own copies of engine packages (package id →
+// the program or folder they picked; Settings › Engines). When they changed
+// the cached finds are forgotten, and it reports true: re-check the engines then.
+func SetOwnCopies(copies map[string]string) bool {
+	mu.Lock()
+	defer mu.Unlock()
+	if maps.Equal(copies, ownCopies) || len(copies) == 0 && len(ownCopies) == 0 {
+		return false
+	}
+	ownCopies = maps.Clone(copies)
+	if ownCopies == nil {
+		ownCopies = map[string]string{}
+	}
+	cache = map[string]string{}
+	return true
+}
+
+// OwnCopy is the program of the user's own copy of s's package, or "" when
+// none is set or it lacks the programs.
+func OwnCopy(s Spec) string {
+	if s.Package == "" {
+		return ""
+	}
+	mu.Lock()
+	path := ownCopies[s.Package]
+	mu.Unlock()
+	if path == "" {
+		return ""
+	}
+	for _, n := range s.Names {
+		if f := FolderWithPrograms(path, append([]string{n}, s.Requires...)...); f != "" {
+			return Program(f, n)
+		}
+	}
+	return ""
+}
+
+// Find returns the full path of the program, or "" when it is not installed:
+// the FILEE_* variable, the user's own copy (Spec.Package), Filee's engines
+// folder and the usual install places, then the PATH. Results are cached
+// until Forget.
 func Find(s Spec) string {
-	key := strings.Join(s.Names, "|") + "|" + s.Env
+	key := strings.Join(s.Names, "|") + "|" + s.Env + "|" + s.Package
 	mu.Lock()
 	if p, ok := cache[key]; ok {
 		mu.Unlock()
@@ -78,6 +126,9 @@ func find(s Spec) string {
 		if p := os.Getenv(s.Env); p != "" && isExec(p) {
 			return p
 		}
+	}
+	if p := OwnCopy(s); p != "" {
+		return p
 	}
 	for _, d := range expandDirs(s.Dirs[runtime.GOOS]) {
 		for _, n := range s.Names {

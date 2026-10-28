@@ -6,8 +6,6 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
-	_ "image/gif"
-	_ "image/jpeg"
 	"image/png"
 	"math"
 	"os"
@@ -17,12 +15,11 @@ import (
 	"sync"
 	"sync/atomic"
 
-	_ "golang.org/x/image/bmp"
 	"golang.org/x/image/font/sfnt"
 	"golang.org/x/image/math/fixed"
-	_ "golang.org/x/image/tiff"
 	"golang.org/x/image/vector"
 
+	"github.com/dseif0x/filee-go/internal/engines/images"
 	"github.com/dseif0x/filee-go/internal/xdom"
 )
 
@@ -40,16 +37,19 @@ func (r *reader) newMediaName(ext string) string {
 	return filepath.Join(r.media, fmt.Sprintf("ofd-%d-%d.%s", os.Getpid(), fileCounter.Add(1), ext))
 }
 
-// toPNG decodes a picture (TIFF, …) and writes it as PNG; "" when it cannot.
-func toPNG(b []byte, path string) string {
+// toPNG decodes a picture of kind (TIFF, JPEG 2000) with the image engine
+// and writes it as PNG; "" when it cannot.
+func toPNG(b []byte, kind, path string) string {
+	// The image engine registers its decoders (JPEG 2000 too) with package image.
 	cfg, _, err := image.DecodeConfig(bytes.NewReader(b))
 	if err != nil || int64(cfg.Width)*int64(cfg.Height) > maxPicturePixels {
 		return ""
 	}
-	img, _, err := image.Decode(bytes.NewReader(b))
-	if err != nil {
+	pic, err := images.DecodeBytes(b, kind)
+	if err != nil || len(pic.Frames) == 0 {
 		return ""
 	}
+	img := pic.Frames[0].Img
 	f, err := os.Create(path)
 	if err != nil {
 		return ""

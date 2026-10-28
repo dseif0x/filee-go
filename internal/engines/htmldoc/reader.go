@@ -10,10 +10,6 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
-	"image"
-	_ "image/gif"
-	_ "image/jpeg"
-	_ "image/png"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -23,13 +19,11 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	_ "golang.org/x/image/bmp"
-	_ "golang.org/x/image/tiff"
-	_ "golang.org/x/image/webp"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/charset"
 
 	"github.com/dseif0x/filee-go/internal/doc"
+	"github.com/dseif0x/filee-go/internal/engines/images"
 )
 
 // ReadOptions say how a document's resources, links and anchors are resolved.
@@ -1521,12 +1515,8 @@ func UsableImage(path, mediaFolder string) string {
 		}
 		return png
 	}
-	f, err := os.Open(path)
-	if err != nil {
-		return ""
-	}
-	defer f.Close()
-	if _, _, err := image.DecodeConfig(f); err != nil {
+	// TIFF, AVIF, PSD, …: the image engine reads them, and the writers convert them.
+	if _, _, ok := images.PictureSize(path); !ok {
 		return ""
 	}
 	return path

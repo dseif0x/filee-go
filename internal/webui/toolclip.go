@@ -319,13 +319,13 @@ func browserPlays(format string) bool {
 }
 
 func ffmpegPath() string {
-	return tools.Find(tools.Spec{Names: []string{"ffmpeg"}, Env: "FILEE_FFMPEG", Dirs: map[string][]string{
+	return tools.Find(tools.Spec{Names: []string{"ffmpeg"}, Env: "FILEE_FFMPEG", Package: "ffmpeg", Dirs: map[string][]string{
 		"darwin": {"ffmpeg", "/opt/homebrew/bin", "/usr/local/bin"}, "linux": {"ffmpeg"}, "windows": {"ffmpeg", `ffmpeg\bin`},
 	}})
 }
 
 func ffprobePath() string {
-	return tools.Find(tools.Spec{Names: []string{"ffprobe"}, Env: "FILEE_FFPROBE", Dirs: map[string][]string{
+	return tools.Find(tools.Spec{Names: []string{"ffprobe"}, Env: "FILEE_FFPROBE", Package: "ffmpeg", Dirs: map[string][]string{
 		"darwin": {"ffmpeg", "/opt/homebrew/bin", "/usr/local/bin"}, "linux": {"ffmpeg"}, "windows": {"ffmpeg", `ffmpeg\bin`},
 	}})
 }

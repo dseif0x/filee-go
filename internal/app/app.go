@@ -30,6 +30,7 @@ import (
 
 	"github.com/dseif0x/filee-go/internal/convert"
 	"github.com/dseif0x/filee-go/internal/engines/all"
+	"github.com/dseif0x/filee-go/internal/engines/libreoffice"
 	"github.com/dseif0x/filee-go/internal/formats"
 	"github.com/dseif0x/filee-go/internal/history"
 	"github.com/dseif0x/filee-go/internal/i18n"
@@ -38,6 +39,7 @@ import (
 	"github.com/dseif0x/filee-go/internal/presets"
 	"github.com/dseif0x/filee-go/internal/profiles"
 	"github.com/dseif0x/filee-go/internal/settings"
+	"github.com/dseif0x/filee-go/internal/tools"
 	"github.com/dseif0x/filee-go/internal/watch"
 	"github.com/dseif0x/filee-go/internal/web"
 )
@@ -133,6 +135,9 @@ func New(o Options) (*App, error) {
 		subs: map[int]func(Event){}, dl: web.NewDownloader(nil, "Filee/"+Version),
 	}
 	a.catalog.SetPriority(store.Settings.EnginePriority)
+	if applyEngineSettings(store.Settings) {
+		a.catalog.Refresh()
+	}
 	i18n.SetLanguage(store.Settings.Language)
 	a.queue = jobs.NewQueue(a.catalog, jobs.Options{MoveToTrash: o.Platform.MoveToTrash, Log: o.Log, WorkRoot: o.WorkRoot})
 	a.unsubQueue = a.queue.Subscribe(a.onJob)
@@ -283,10 +288,27 @@ func (a *App) SaveSettings(s *settings.AppSettings) error {
 		return err
 	}
 	a.catalog.SetPriority(s.EnginePriority)
+	if applyEngineSettings(s) {
+		a.RefreshEngines()
+	}
 	i18n.SetLanguage(s.Language)
 	a.restartWatchersIfRunning()
 	a.emit(Event{Kind: SettingsChanged})
 	return nil
+}
+
+// applyEngineSettings hands the engine settings to the engines (C#
+// EngineEnvironment): the user's own copies of engine packages and which
+// conversions to PDF go through LibreOffice. It reports whether the engines
+// must be checked again.
+func applyEngineSettings(s *settings.AppSettings) bool {
+	changed := tools.SetOwnCopies(s.EngineOwnCopies)
+	lo := [4]bool{s.LibreOfficeForSlides, s.LibreOfficeForHwp, s.LibreOfficeForDocuments, s.LibreOfficeForSheets}
+	if lo != [4]bool{libreoffice.ForSlides, libreoffice.ForHwp, libreoffice.ForDocuments, libreoffice.ForSheets} {
+		libreoffice.ForSlides, libreoffice.ForHwp, libreoffice.ForDocuments, libreoffice.ForSheets = lo[0], lo[1], lo[2], lo[3]
+		changed = true
+	}
+	return changed
 }
 
 // ---- presets ----

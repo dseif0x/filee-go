@@ -20,6 +20,8 @@ import (
 	"time"
 
 	"github.com/dseif0x/filee-go/internal/convert"
+	"github.com/dseif0x/filee-go/internal/engines/heic"
+	"github.com/dseif0x/filee-go/internal/engines/images"
 	"github.com/dseif0x/filee-go/internal/formats"
 	"github.com/dseif0x/filee-go/internal/presets"
 	"github.com/dseif0x/filee-go/internal/tools"
@@ -28,8 +30,10 @@ import (
 // FfmpegSpec finds FFmpeg: FILEE_FFMPEG, Filee's engines folder, PATH,
 // Homebrew / MacPorts on macOS, the usual Windows folders.
 var FfmpegSpec = tools.Spec{
-	Names: []string{"ffmpeg"},
-	Env:   "FILEE_FFMPEG",
+	Names:    []string{"ffmpeg"},
+	Env:      "FILEE_FFMPEG",
+	Package:  "ffmpeg",
+	Requires: []string{"ffprobe"},
 	Dirs: map[string][]string{
 		"darwin":  {"ffmpeg", "ffmpeg/bin", "/opt/homebrew/opt/ffmpeg/bin", "/Applications/FFmpeg", "~/Applications/FFmpeg"},
 		"linux":   {"ffmpeg", "ffmpeg/bin"},
@@ -163,7 +167,8 @@ func (c *Converter) Edges() []convert.Edge {
 	for _, t := range PictureToVideoTargets {
 		e = append(e, convert.EC("gif", t, 10), convert.EC("apng", t, 11), convert.EC("png", t, 11))
 	}
-	for _, s := range HeicSources {
+	// HEIC: the image engine reads, x265 encodes, Filee writes the container (package heic).
+	for _, s := range images.Sources() {
 		e = append(e, convert.EC(s, "heic", 10))
 	}
 	for _, s := range presets.MotionPhotoSources {
@@ -223,7 +228,7 @@ func (c *Converter) Convert(ctx context.Context, step *convert.Step, progress co
 		return c.livePhoto(ctx, ffmpeg, ffprobe, step, progress)
 	}
 	if step.To == "heic" {
-		return c.toHeic(ctx, ffmpeg, step, progress)
+		return heic.Convert(ctx, ffmpeg, step, progress)
 	}
 	input, _ := filepath.Abs(step.InputPath)
 	info, err := Probe(ctx, ffprobe, input)

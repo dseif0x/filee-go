@@ -1,4 +1,4 @@
-// PDF → TXT, Markdown and DOCX, read by ReadDocument: the text in reading
+// PDF → TXT and Markdown, read by ReadDocument: the text in reading
 // order (also on two-column pages), without running headers, footers and
 // page numbers.
 //
@@ -6,9 +6,8 @@
 // invisible text layer of OCR-processed scans is included. Markdown keeps
 // headings, bold / italic and links; the pictures go into a "<name>_files"
 // folder next to it, and a page without text (a scan) becomes the picture of
-// the page. With "Leave out pictures" the Markdown is read like TXT. DOCX
-// keeps the layout as far as the document model holds it (page size and
-// margins, indents, tabs, tables, pictures, a scan behind its page).
+// the page. With "Leave out pictures" the Markdown is read like TXT. PDF →
+// DOCX / HWPX is the DOCX and HWPX writers' (the reader in docreader.go).
 
 package pdf
 
@@ -19,12 +18,9 @@ import (
 	"path/filepath"
 
 	"github.com/dseif0x/filee-go/internal/convert"
+	"github.com/dseif0x/filee-go/internal/doc"
 	"github.com/dseif0x/filee-go/internal/presets"
 )
-
-// PdfPenalty is the extra cost of reading a PDF: its text is rebuilt from
-// positioned words, so a route keeping the source's own structure wins.
-const PdfPenalty = 6
 
 // ErrNoText: a PDF without text (a scan).
 var ErrNoText = errors.New("The PDF contains no text (it may be scanned; Filee does not recognise text in images).")
@@ -41,22 +37,18 @@ func (PdfText) Edges() []convert.Edge {
 		convert.E("pdf", "txt"),
 		// Read once, written once; direct only, so no other route starts going
 		// through a Markdown file and its picture folder.
-		{From: "pdf", To: "md", Cost: 10 + PdfPenalty, DirectOnly: true},
-		// The DOCX writer's edge for PDFs (cost 8 plus the PDF penalty).
-		convert.EC("pdf", "docx", 8+PdfPenalty),
+		{From: "pdf", To: "md", Cost: 10 + doc.PdfPenalty, DirectOnly: true},
 	}
 }
 
 func (PdfText) Status() convert.Status {
-	return convert.Available("PDF → TXT, Markdown, DOCX", PdfiumVersion)
+	return convert.Available("PDF → TXT, Markdown", PdfiumVersion)
 }
 
 func (PdfText) Convert(ctx context.Context, step *convert.Step, progress convert.Progress) ([]string, error) {
 	switch step.To {
 	case "md":
 		return pdfToMarkdown(ctx, step, progress)
-	case "docx":
-		return pdfToDocx(ctx, step, progress)
 	}
 	return pdfToText(ctx, step, progress)
 }
@@ -151,22 +143,4 @@ func notBold(inlines []Inline) {
 			notBold(v.Content)
 		}
 	}
-}
-
-func pdfToDocx(ctx context.Context, step *convert.Step, progress convert.Progress) ([]string, error) {
-	progress.Report(0.1)
-	doc, err := ReadDocument(ctx, step.InputPath, mediaDir(step), readMode(step.Preset))
-	if err != nil {
-		return nil, err
-	}
-	progress.Report(0.6)
-	out := step.Output.Allocate("docx", "")
-	if out == "" {
-		return nil, nil
-	}
-	if err := WriteDocx(doc, out); err != nil {
-		return nil, err
-	}
-	progress.Report(1)
-	return []string{out}, nil
 }

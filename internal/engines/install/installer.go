@@ -294,7 +294,7 @@ func (in *Installer) unpack(ctx context.Context, c Component, file string) error
 		}
 	case "nsis":
 		// NSIS installers (Tesseract) are unpacked with 7-Zip, never run: files only.
-		seven := tools.Find(tools.Spec{Names: []string{"7z", "7zz", "7za"}, Env: "FILEE_7ZIP", Dirs: map[string][]string{"windows": {"7zip", "C:/Program Files/7-Zip"}}})
+		seven := tools.Find(tools.Spec{Names: []string{"7z", "7zz", "7za"}, Env: "FILEE_7ZIP", Package: "7zip", Dirs: map[string][]string{"windows": {"7zip", "C:/Program Files/7-Zip"}}})
 		if seven == "" {
 			return fmt.Errorf("%s needs 7-Zip, which is missing.", c.ID)
 		}

@@ -10,7 +10,7 @@ func TestRoutes(t *testing.T) {
 	p := convert.NewPlanner([]convert.Converter{PdfSharp{}, Pdfium{}, PdfText{}, PdfSlides{}, PdfTables{}}, nil)
 	for _, c := range []struct{ from, to, first string }{
 		{"png", "pdf", "pdfsharp"}, {"heic", "pdf", "pdfsharp"}, {"pdf", "pdf", "pdfsharp"},
-		{"pdf", "webp", "pdfium"}, {"pdf", "txt", "pdf-text"}, {"pdf", "md", "pdf-text"}, {"pdf", "docx", "pdf-text"},
+		{"pdf", "webp", "pdfium"}, {"pdf", "txt", "pdf-text"}, {"pdf", "md", "pdf-text"},
 		{"pdf", "pptx", "pdf-slides"}, {"pdf", "xlsx", "pdf-tables"}, {"jpg", "png", "pdfsharp"},
 	} {
 		r := p.Plan(c.from, c.to, convert.Options{})

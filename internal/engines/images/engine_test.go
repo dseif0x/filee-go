@@ -504,3 +504,26 @@ func errorsAs(err error, target **convert.RefusedError) bool {
 	}
 	return ok
 }
+
+func TestPictureSizeAndWritePNG(t *testing.T) {
+	dir := t.TempDir()
+	for _, f := range []string{"png", "qoi", "psd", "tga", "webp"} {
+		path := filepath.Join(dir, "p."+f)
+		if err := Encode(path, image.NewNRGBA(image.Rect(0, 0, 7, 5)), f, nil); err != nil {
+			t.Fatal(err)
+		}
+		if w, h, ok := PictureSize(path); !ok || w != 7 || h != 5 {
+			t.Errorf("%s: %d × %d %v", f, w, h, ok)
+		}
+		var buf bytes.Buffer
+		if err := WritePNG(path, &buf); err != nil {
+			t.Errorf("%s: %v", f, err)
+		}
+		if cfg, err := png.DecodeConfig(&buf); err != nil || cfg.Width != 7 {
+			t.Errorf("%s: %v", f, err)
+		}
+	}
+	if _, _, ok := PictureSize(filepath.Join(dir, "missing.png")); ok {
+		t.Error("a missing file has no size")
+	}
+}

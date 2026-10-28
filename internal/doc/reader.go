@@ -16,6 +16,10 @@ type ReadFunc func(path, media string) (*Document, error)
 // positioned words, so a route keeping the source's structure wins.
 const PdfPenalty = 6
 
+// PdfOcrLayer, when set, reads a PDF with its OCR layer as its text (the PDF
+// engine sets it); the writers use it when the preset recognises text.
+var PdfOcrLayer ReadFunc
+
 var (
 	readersMu sync.RWMutex
 	readers   = map[string]ReadFunc{}

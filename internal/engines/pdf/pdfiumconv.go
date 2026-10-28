@@ -1,5 +1,6 @@
-// PDF pages → pictures with PDFium: one picture per page, one multi-page TIFF
-// or GIF, or (PdfOptions.CombinePages) the pages stacked into one tall image.
+// PDF pages → pictures with PDFium: one picture per page, one multi-page TIFF,
+// GIF, APNG or MNG, or (PdfOptions.CombinePages) the pages stacked into one
+// tall image. The image engine applies the picture options and writes.
 
 package pdf
 
@@ -9,11 +10,11 @@ import (
 	"image"
 	"image/color"
 	"math"
-	"os"
 
 	"golang.org/x/image/draw"
 
 	"github.com/dseif0x/filee-go/internal/convert"
+	"github.com/dseif0x/filee-go/internal/engines/images"
 	"github.com/dseif0x/filee-go/internal/presets"
 )
 
@@ -30,7 +31,11 @@ func (Pdfium) Name() string { return "PDFium" }
 // MaxParallelism: one PDFium WebAssembly instance per conversion; a few run at once.
 func (Pdfium) MaxParallelism() int { return pdfiumWorkers }
 
-func (Pdfium) Edges() []convert.Edge { return convert.Fan([]string{"pdf"}, imageTargets, 10) }
+// Edges: PDF → every format the image engine writes (C# ImageEncoder.Writable).
+func (Pdfium) Edges() []convert.Edge { return convert.Fan([]string{"pdf"}, images.Writable, 10) }
+
+// multiPageTargets hold every page in one file.
+var multiPageTargets = map[string]bool{"tiff": true, "gif": true, "apng": true, "mng": true}
 
 func (Pdfium) Status() convert.Status { return convert.Available("", PdfiumVersion) }
 
@@ -54,28 +59,21 @@ func (Pdfium) Convert(ctx context.Context, step *convert.Step, progress convert.
 	if opts.RenderDpi == 0 {
 		dpi = 150
 	}
-	outDpi := dpi
-	if img.Dpi != nil && *img.Dpi > 0 {
-		outDpi = *img.Dpi
-	}
 	stack := opts.CombinePages && len(pages) > 1 && !multiPageTargets[step.To]
 	var written []string
-	var collected []image.Image
-
-	ext := step.To
-	if ext == "ppm" && img.Grayscale {
-		ext = "pgm"
+	var collected []*images.Frame
+	// write writes one picture through the image engine, under the given suffix.
+	write := func(f *images.Frame, suffix string) error {
+		out := convert.AllocatorFunc(func(ext, _ string) string { return step.Output.Allocate(ext, suffix) })
+		paths, err := images.Write([]*images.Frame{f}, step.To, out, img, "", false, 0)
+		written = append(written, paths...)
+		return err
 	}
-	write := func(pic image.Image, suffix string) error {
-		path := step.Output.Allocate(ext, suffix)
-		if path == "" {
-			return nil
-		}
-		if err := writePicture(path, pic, step.To, img, outDpi); err != nil {
-			return err
-		}
-		written = append(written, path)
-		return nil
+	// newFrame is a rendered picture at the render resolution (ApplyOptions sets the preset's).
+	newFrame := func(pic image.Image) *images.Frame {
+		f := images.NewFrame(pic)
+		f.Meta.DpiX, f.Meta.DpiY = float64(dpi), float64(dpi)
+		return f
 	}
 
 	for i, index := range pages {
@@ -86,20 +84,20 @@ func (Pdfium) Convert(ctx context.Context, step *convert.Step, progress convert.
 		if err != nil {
 			return nil, err
 		}
-		var frame image.Image = page
+		frame := newFrame(page)
 		if stack {
 			// Each page turns, then they stack: a turned long image would lie on its side.
-			frame = turn(frame, img)
+			images.Turn(frame, img)
 			if opts.TrimPageMargins {
-				frame = trimVertically(frame, dpi)
+				frame.Img = toNRGBA(trimVertically(frame.Img, dpi))
 			}
 			collected = append(collected, frame)
 			progress.Report(float64(i+1) / float64(len(pages)) * 0.8)
 			continue
 		}
-		frame = applyOptions(frame, img, step.To)
+		images.ApplyOptions(frame, img, step.To)
 		if multiPageTargets[step.To] {
-			collected = append(collected, frame)
+			collected = append(collected, frame) // one multi-page file, written after the loop
 		} else {
 			suffix := ""
 			if len(pages) > 1 {
@@ -116,12 +114,17 @@ func (Pdfium) Convert(ctx context.Context, step *convert.Step, progress convert.
 	case stack:
 		unturned := *img // the pages are turned already
 		unturned.Rotation, unturned.Flip = presets.RotateNone, presets.FlipNone
-		parts := [][]image.Image{collected}
+		parts := [][]*images.Frame{collected}
 		if opts.SplitTallImage {
 			parts = splitRuns(collected, step.To, &unturned)
 		}
 		for p, part := range parts {
-			tall := applyOptions(stackPages(part), &unturned, step.To)
+			pics := make([]image.Image, len(part))
+			for i, f := range part {
+				pics[i] = f.Img
+			}
+			tall := newFrame(stackPages(pics))
+			images.ApplyOptions(tall, &unturned, step.To) // also scales it to fit the format
 			suffix := ""
 			if len(parts) > 1 {
 				suffix = fmt.Sprintf("_%d", p+1)
@@ -130,46 +133,15 @@ func (Pdfium) Convert(ctx context.Context, step *convert.Step, progress convert.
 				return nil, err
 			}
 		}
-	case len(collected) == 1:
-		if err := write(collected[0], ""); err != nil {
+	case len(collected) > 0:
+		paths, err := images.Write(collected, step.To, step.Output, img, "", false, 0)
+		written = append(written, paths...)
+		if err != nil {
 			return nil, err
-		}
-	case len(collected) > 1:
-		path := step.Output.Allocate(ext, "")
-		if path != "" {
-			f, err := os.Create(path)
-			if err != nil {
-				return nil, err
-			}
-			err = encodeMultiPage(f, collected, step.To, img, outDpi)
-			if cerr := f.Close(); err == nil {
-				err = cerr
-			}
-			if err != nil {
-				os.Remove(path)
-				return nil, err
-			}
-			written = append(written, path)
 		}
 	}
 	progress.Report(1)
 	return written, nil
-}
-
-// writePicture encodes one picture into a new file (removed again on failure).
-func writePicture(path string, pic image.Image, format string, o *presets.ImageOptions, dpi int) error {
-	f, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-	err = encodeImage(f, pic, format, o, dpi)
-	if cerr := f.Close(); err == nil {
-		err = cerr
-	}
-	if err != nil {
-		os.Remove(path)
-	}
-	return err
 }
 
 // stackPages puts the pages one under another, centred on a white strip as
@@ -207,19 +179,19 @@ func stackPages(pages []image.Image) image.Image {
 // splitRuns cuts the pages into runs short enough for one image of the format
 // after the preset's resize (a 44-page certificate at 1200 px wide is
 // 74,673 px tall, more than a JPG holds). Runs break between pages.
-func splitRuns(pages []image.Image, target string, o *presets.ImageOptions) [][]image.Image {
+func splitRuns(pages []*images.Frame, target string, o *presets.ImageOptions) [][]*images.Frame {
 	var width, height float64
 	for _, p := range pages {
-		width = max(width, float64(p.Bounds().Dx()))
-		height += float64(p.Bounds().Dy())
+		width = max(width, float64(p.Width()))
+		height += float64(p.Height())
 	}
-	scale := resizeScale(width, height, o) * min(1, math.Sqrt(MaxStackedPixels/(width*height)))
-	limit := maxSide(target) / scale
-	var parts [][]image.Image
-	var run []image.Image
+	scale := images.ResizeScale(width, height, o) * min(1, math.Sqrt(MaxStackedPixels/(width*height)))
+	limit := images.MaxSide(target) / scale
+	var parts [][]*images.Frame
+	var run []*images.Frame
 	var runHeight float64
 	for _, p := range pages {
-		h := float64(p.Bounds().Dy())
+		h := float64(p.Height())
 		if len(run) > 0 && runHeight+h > limit {
 			parts = append(parts, run)
 			run, runHeight = nil, 0

@@ -18,8 +18,9 @@ import (
 // TesseractSpec finds Tesseract: FILEE_TESSERACT, Filee's engines folder,
 // PATH, Homebrew on macOS, the UB Mannheim installer's folder on Windows.
 var TesseractSpec = tools.Spec{
-	Names: []string{"tesseract"},
-	Env:   "FILEE_TESSERACT",
+	Names:   []string{"tesseract"},
+	Env:     "FILEE_TESSERACT",
+	Package: "tesseract",
 	Dirs: map[string][]string{
 		"darwin":  {"tesseract", "tesseract/bin", "/opt/homebrew/opt/tesseract/bin"},
 		"linux":   {"tesseract", "tesseract/bin"},

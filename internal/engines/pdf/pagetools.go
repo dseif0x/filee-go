@@ -13,6 +13,8 @@ import (
 	"strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
+
+	"github.com/dseif0x/filee-go/internal/convert"
 )
 
 // PageReference is one page of an edited document; Rotation is an extra
@@ -186,4 +188,23 @@ func mapFromShown(rotation int, x, y, w, h float64) (float64, float64, float64, 
 		return 1 - v1, 1 - u1, 1 - v0, 1 - u0
 	}
 	return u0, 1 - v1, u1, 1 - v0
+}
+
+// FirstPage writes the first page of pageRange (all pages when empty) of
+// input as a PDF of its own: LibreOffice Draw's SVG export draws every page
+// of a PDF on top of each other.
+func FirstPage(ctx context.Context, input, output, pageRange string) error {
+	pc, err := readContext(ctx, input)
+	if err != nil {
+		return err
+	}
+	pages := convert.ParsePageRange(pageRange, pc.PageCount)
+	if len(pages) == 0 {
+		return errors.New("The PDF has no pages in the selected range.")
+	}
+	single, err := extractPages(ctx, pc, pages[:1])
+	if err != nil {
+		return err
+	}
+	return writeContext(ctx, single, output)
 }

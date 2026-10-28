@@ -5,6 +5,8 @@ import (
 	"context"
 	"image/color"
 	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -137,5 +139,30 @@ func TestMerge(t *testing.T) {
 	s := pdfInfo(t, out)
 	if len(s) != 4 || s[3][0] != 300 {
 		t.Fatal(s)
+	}
+}
+
+// "Compress with Ghostscript": a stand-in Ghostscript whose PDF is smaller wins.
+func TestCompressWithGhostscript(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the stand-in Ghostscript is a shell script")
+	}
+	dir := t.TempDir()
+	gs := filepath.Join(dir, "gs")
+	script := "#!/bin/sh\nfor a; do case \"$a\" in -sOutputFile=*) printf '%%PDF-1.4 gs' > \"${a#-sOutputFile=}\";; esac; done\n"
+	if err := os.WriteFile(gs, []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("FILEE_GHOSTSCRIPT", gs)
+	step := newStep(t, threePages(t), "pdf", "pdf", func(p *presets.Preset) {
+		p.Pdf.Compression = presets.PdfCompressEbook
+		p.Pdf.CompressWithGhostscript = true
+	})
+	out, err := PdfSharp{}.Convert(context.Background(), step, nil)
+	if err != nil || len(out) != 1 {
+		t.Fatal(out, err)
+	}
+	if data, _ := os.ReadFile(out[0]); string(data) != "%PDF-1.4 gs" {
+		t.Fatalf("Ghostscript's smaller PDF should win: %q", data[:min(len(data), 40)])
 	}
 }

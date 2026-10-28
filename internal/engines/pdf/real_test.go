@@ -29,8 +29,10 @@ func TestRealPdf(t *testing.T) {
 		var out []string
 		var err error
 		switch c.to {
-		case "txt", "md", "docx":
+		case "txt", "md":
 			out, err = PdfText{}.Convert(context.Background(), step, nil)
+		case "docx":
+			out = []string{pdfToDocx(t, src)}
 		case "xlsx":
 			out, err = PdfTables{}.Convert(context.Background(), step, nil)
 		case "pptx":

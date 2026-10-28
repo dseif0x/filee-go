@@ -64,10 +64,6 @@ func NeedsPandoc(format string) bool {
 	return !doc.HasReader(format) && slices.Contains(PandocFormats(), format)
 }
 
-// OcrReader, when set, reads a PDF through its OCR text layer (the PDF engine registers it); used when the preset
-// asks for OCR.
-var OcrReader doc.ReadFunc
-
 // ReadDocument reads path (of format) into the document model. Extracted pictures go into a new folder inside
 // workDir.
 func ReadDocument(ctx context.Context, path, format, workDir string, ocrLayer bool) (*doc.Document, error) {
@@ -75,8 +71,8 @@ func ReadDocument(ctx context.Context, path, format, workDir string, ocrLayer bo
 	if err != nil {
 		return nil, err
 	}
-	if ocrLayer && format == "pdf" && OcrReader != nil {
-		return OcrReader(path, media)
+	if ocrLayer && format == "pdf" && doc.PdfOcrLayer != nil {
+		return doc.PdfOcrLayer(path, media)
 	}
 	if doc.HasReader(format) {
 		return doc.Read(path, format, media)

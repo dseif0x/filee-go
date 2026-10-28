@@ -50,10 +50,6 @@ func (c *Converter) Status() convert.Status {
 	return convert.Available(strings.Join(from, ", ")+" → DOCX", "built-in")
 }
 
-// OcrReader, when set, reads a PDF through its OCR text layer (the PDF
-// engine registers it); used when the preset asks for OCR.
-var OcrReader doc.ReadFunc
-
 func (*Converter) Convert(ctx context.Context, step *convert.Step, progress convert.Progress) ([]string, error) {
 	progress.Report(0.1)
 	media, err := os.MkdirTemp(step.WorkDir, "media-")
@@ -61,8 +57,8 @@ func (*Converter) Convert(ctx context.Context, step *convert.Step, progress conv
 		return nil, err
 	}
 	var d *doc.Document
-	if step.From == "pdf" && step.Preset != nil && step.Preset.Pdf.Ocr && OcrReader != nil {
-		d, err = OcrReader(step.InputPath, media)
+	if step.From == "pdf" && step.Preset != nil && step.Preset.Pdf.Ocr && doc.PdfOcrLayer != nil {
+		d, err = doc.PdfOcrLayer(step.InputPath, filepath.Join(media, "files"))
 	} else {
 		d, err = doc.Read(step.InputPath, step.From, filepath.Join(media, "files"))
 	}

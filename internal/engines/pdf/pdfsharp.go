@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 
 	"github.com/dseif0x/filee-go/internal/convert"
+	"github.com/dseif0x/filee-go/internal/engines/ghostscript"
 	"github.com/dseif0x/filee-go/internal/presets"
 )
 
@@ -247,7 +248,7 @@ func splitOrExtract(ctx context.Context, step *convert.Step, progress convert.Pr
 // the whole file keeps everything and is compressed as it is; selected pages
 // are copied into new PDFs first. When the compression isn't smaller than the
 // pages as they were, those are written unchanged and the file gets a notice.
-// (Ghostscript as a second try is the Ghostscript engine's.)
+// "Compress with Ghostscript" also tries pdfwrite and keeps the smaller one.
 func compressPdf(ctx context.Context, step *convert.Step, progress convert.Progress) ([]string, error) {
 	o := &step.Preset.Pdf
 	scratch, err := os.MkdirTemp(workDir(step), "compress-")
@@ -291,6 +292,10 @@ func compressPdf(ctx context.Context, step *convert.Step, progress convert.Progr
 		parts = append(parts, part{path, ""})
 	}
 
+	gs := ""
+	if o.CompressWithGhostscript {
+		gs = ghostscript.Locate()
+	}
 	var written []string
 	anySmaller := false
 	for i, p := range parts {
@@ -301,7 +306,7 @@ func compressPdf(ctx context.Context, step *convert.Step, progress convert.Progr
 		if out == "" {
 			continue
 		}
-		smaller, err := compressFile(ctx, p.plain, out, step.Preset, scratch)
+		smaller, err := compressFile(ctx, p.plain, out, step.Preset, gs, scratch)
 		if err != nil {
 			return nil, err
 		}
@@ -315,28 +320,57 @@ func compressPdf(ctx context.Context, step *convert.Step, progress convert.Progr
 	return written, nil
 }
 
-// compressFile writes the smaller of plain and its compressed version to output.
-func compressFile(ctx context.Context, plain, output string, preset *presets.Preset, scratch string) (bool, error) {
-	pc, err := readContext(ctx, plain)
-	if err != nil {
+// compressFile writes the smallest of plain and its compressed versions to
+// output: the built-in compressor's and, with "Compress with Ghostscript",
+// pdfwrite's. It reports whether a compressed version was smaller.
+func compressFile(ctx context.Context, plain, output string, preset *presets.Preset, gs, scratch string) (bool, error) {
+	var candidates []string
+	var failure error
+	builtIn := filepath.Join(scratch, fmt.Sprintf("c%d-filee.pdf", len(plain)))
+	if err := compressBuiltIn(ctx, plain, builtIn, preset); err == nil {
+		candidates = append(candidates, builtIn)
+	} else if gs == "" || ctx.Err() != nil {
 		return false, err
+	} else {
+		failure = err // Ghostscript may still manage
 	}
-	if err := compressContext(ctx, pc, preset.Pdf.Compression, preset.Image.KeepMetadata); err != nil {
-		return false, err
-	}
-	candidate := filepath.Join(scratch, fmt.Sprintf("c%d-filee.pdf", len(plain)))
-	if err := writeContext(ctx, pc, candidate); err != nil {
-		return false, err
+	if gs != "" {
+		rewritten := filepath.Join(scratch, fmt.Sprintf("c%d-gs.pdf", len(plain)))
+		err := ghostscript.CompressPdf(ctx, gs, plain, rewritten, preset.Pdf.Compression, scratch)
+		switch {
+		case err == nil:
+			candidates = append(candidates, rewritten)
+		case ctx.Err() != nil:
+			return false, ctx.Err()
+		case len(candidates) == 0:
+			return false, failure // the built-in result would have stood; there is none
+		}
 	}
 	original, err := os.Stat(plain)
 	if err != nil {
 		return false, err
 	}
-	c, err := os.Stat(candidate)
-	if err == nil && c.Size() < original.Size() {
-		return true, os.Rename(candidate, output)
+	best, bestSize := "", original.Size()
+	for _, c := range candidates {
+		if fi, err := os.Stat(c); err == nil && fi.Size() < bestSize {
+			best, bestSize = c, fi.Size()
+		}
+	}
+	if best != "" {
+		return true, copyWritable(best, output)
 	}
 	return false, copyWritable(plain, output)
+}
+
+func compressBuiltIn(ctx context.Context, plain, target string, preset *presets.Preset) error {
+	pc, err := readContext(ctx, plain)
+	if err != nil {
+		return err
+	}
+	if err := compressContext(ctx, pc, preset.Pdf.Compression, preset.Image.KeepMetadata); err != nil {
+		return err
+	}
+	return writeContext(ctx, pc, target)
 }
 
 // workDir is the step's scratch folder (the system's when the step has none).

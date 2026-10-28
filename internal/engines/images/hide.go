@@ -243,3 +243,14 @@ func dropPreviews(f *Frame) {
 		f.Meta.XMP = nil
 	}
 }
+
+// Cover covers the whole picture with an effect size pixels large (a square's
+// side or the blur's sigma): the hide window's preview, of which it shows the
+// parts inside the frames.
+func Cover(img *image.NRGBA, style presets.HideStyle, size float64) {
+	if style == presets.HideBlur {
+		Blur(img, img.Rect, size)
+	} else {
+		Pixelate(img, img.Rect, size)
+	}
+}

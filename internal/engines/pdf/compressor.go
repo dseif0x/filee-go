@@ -201,7 +201,6 @@ func undoRunLength(data []byte) []byte {
 	return out
 }
 
-
 // colourComponents of a colour space Filee re-encodes (gray, RGB, CMYK and
 // their calibrated / ICC forms), else 0.
 func colourComponents(pc *pdfContext, o types.Object) int {

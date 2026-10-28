@@ -15,9 +15,9 @@ import (
 // horizontal prediction. x/image/tiff writes one page and no LZW.
 func writeTiff(w io.Writer, pages []image.Image, compression presets.TiffCompression, dpi int) error {
 	type page struct {
-		data                []byte
-		width, height, spp  int
-		alpha               bool
+		data               []byte
+		width, height, spp int
+		alpha              bool
 	}
 	var built []page
 	for _, img := range pages {

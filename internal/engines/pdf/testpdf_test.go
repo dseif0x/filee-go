@@ -14,6 +14,8 @@ type testPage struct {
 	W, H    float64
 	Content string
 	Rotate  int
+	// Extra is added to the page dictionary (annotations).
+	Extra string
 }
 
 // buildPDF writes a minimal valid PDF with the pages.
@@ -32,8 +34,8 @@ func buildPDF(t testing.TB, pages ...testPage) string {
 		if p.Rotate != 0 {
 			rot = fmt.Sprintf(" /Rotate %d", p.Rotate)
 		}
-		kids = append(kids, add(fmt.Sprintf("<< /Type /Page /Parent %d 0 R /MediaBox [0 0 %g %g]%s /Resources << /Font << /F1 %d 0 R /F2 %d 0 R >> >> /Contents %d 0 R >>",
-			pagesObj, p.W, p.H, rot, f1, f2, c)))
+		kids = append(kids, add(fmt.Sprintf("<< /Type /Page /Parent %d 0 R /MediaBox [0 0 %g %g]%s /Resources << /Font << /F1 %d 0 R /F2 %d 0 R >> >> /Contents %d 0 R %s>>",
+			pagesObj, p.W, p.H, rot, f1, f2, c, p.Extra)))
 	}
 	objs[catalog-1] = fmt.Sprintf("<< /Type /Catalog /Pages %d 0 R >>", pagesObj)
 	var k bytes.Buffer
@@ -69,4 +71,14 @@ func textLines(size float64, x, top float64, lines ...string) string {
 		fmt.Fprintf(&b, "BT /F1 %g Tf %g %g Td (%s) Tj ET\n", size, x, top-float64(i)*size*1.2, l)
 	}
 	return b.String()
+}
+
+// text is one piece of text at x, y (baseline) in font F1 or F2 (bold).
+func text(font string, size, x, y float64, s string) string {
+	return fmt.Sprintf("BT /%s %g Tf %g %g Td (%s) Tj ET\n", font, size, x, y, s)
+}
+
+// linkAnnot is a link annotation to uri over the box.
+func linkAnnot(x1, y1, x2, y2 float64, uri string) string {
+	return fmt.Sprintf("<< /Type /Annot /Subtype /Link /Rect [%g %g %g %g] /Border [0 0 0] /A << /S /URI /URI (%s) >> >>", x1, y1, x2, y2, uri)
 }

@@ -35,7 +35,7 @@ type outline struct {
 	MinX, MinY, MaxX, MaxY float64
 }
 
-func (o *outline) empty() bool { return len(o.Segs) == 0 }
+func (o *outline) empty() bool   { return len(o.Segs) == 0 }
 func (o *outline) midX() float64 { return (o.MinX + o.MaxX) / 2 }
 func (o *outline) midY() float64 { return (o.MinY + o.MaxY) / 2 }
 

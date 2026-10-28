@@ -348,4 +348,3 @@ func workDir(step *convert.Step) string {
 	}
 	return os.TempDir()
 }
-

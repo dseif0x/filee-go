@@ -638,6 +638,10 @@ func encodeMultiPage(w io.Writer, frames []image.Image, format string, o *preset
 	}
 	g := &gif.GIF{}
 	for _, f := range frames {
+		g.Config.Width = max(g.Config.Width, f.Bounds().Dx())
+		g.Config.Height = max(g.Config.Height, f.Bounds().Dy())
+	}
+	for _, f := range frames {
 		b := f.Bounds()
 		p := image.NewPaletted(image.Rect(0, 0, b.Dx(), b.Dy()), webSafeWithWhite())
 		draw.FloydSteinberg.Draw(p, p.Bounds(), f, b.Min)

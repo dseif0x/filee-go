@@ -300,3 +300,11 @@ func TestSvgToDxf(t *testing.T) {
 		t.Fatalf("entities %v", kinds)
 	}
 }
+
+func TestRasterizeToFolder(t *testing.T) {
+	in := write(t, "pic.svg", []byte(testSVG))
+	out, err := RasterizeToFolder(in, t.TempDir())
+	if err != nil || !strings.HasSuffix(out, ".png") {
+		t.Fatal(out, err)
+	}
+}

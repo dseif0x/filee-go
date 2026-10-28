@@ -230,3 +230,18 @@ func (l *Localizer) ProfileName(p *profiles.Profile) string {
 	}
 	return p.ID
 }
+
+// Keys lists every key that has a text in the language or in English, sorted.
+func (l *Localizer) Keys() []string {
+	out := make([]string, 0, len(l.fallback)+len(l.texts))
+	for k := range l.fallback {
+		out = append(out, k)
+	}
+	for k := range l.texts {
+		if _, ok := l.fallback[k]; !ok {
+			out = append(out, k)
+		}
+	}
+	slices.Sort(out)
+	return out
+}
